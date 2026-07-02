@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lopes Prime — Portal de Empreendimentos</title>
+  <meta name="description" content="Encontre o empreendimento ideal no Grande ABC. Lopes Prime - Portal de Empreendimentos.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';s.onerror=function(){window.__sbLoadFailed=true;};document.head.appendChild(s);"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#1e40af',700:'#1e3a5f',800:'#0f2240',900:'#0a1628' },
+          },
+          fontFamily: {
+            display: ['Playfair Display','serif'],
+            sans: ['Inter','sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .card-hover{transition:transform .2s,box-shadow .2s}
+    .card-hover:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.1)}
+    .fade-in{animation:fadeIn .4s ease-out}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    .hero-gradient{background:linear-gradient(135deg,#0f2240 0%,#1e40af 50%,#3b82f6 100%)}
+    input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.2);border-color:#3b82f6}
+    .gallery-img{cursor:pointer;transition:transform .2s}
+    .gallery-img:hover{transform:scale(1.03)}
+    .sidebar-link.active{background:rgba(59,130,246,.1);color:#1e40af}
+    html{scroll-behavior:smooth}
+    .view-section{display:none}
+    .view-section.active{display:block}
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800 antialiased">
+
+<!-- ═══════════ HEADER PÚBLICO ═══════════ -->
+<header id="header-public" class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <a href="#home" class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+        <span class="text-white font-bold text-sm">LP</span>
+      </div>
+      <span class="font-display font-bold text-brand-800 text-lg tracking-tight">Lopes Prime</span>
+    </a>
+    <a href="#login" class="text-gray-400 hover:text-brand-600 transition text-sm">Admin</a>
+  </div>
+</header>
+
+<!-- ═══════════ VIEW: HOME ═══════════ -->
+<div id="view-home" class="view-section">
+  <section class="hero-gradient text-white py-16 sm:py-24 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3"></div>
+      <div class="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 relative">
+      <p class="text-blue-200 text-sm font-medium tracking-widest uppercase mb-3">Portal de Empreendimentos</p>
+      <h1 class="font-display text-3xl sm:text-5xl font-bold mb-4 leading-tight">Encontre seu <br class="hidden sm:block">novo lar</h1>
+      <p class="text-blue-100 text-base sm:text-lg max-w-xl mb-8">Empreendimentos selecionados no Grande ABC com as melhores condições.</p>
+      <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-2xl max-w-3xl">
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex-1 relative">
+            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input id="busca" type="text" placeholder="Buscar empreendimento..." class="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 text-gray-800 placeholder-gray-400 border border-gray-200 text-sm">
+          </div>
+          <select id="filtro-cidade" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer">
+            <option value="">Todas as cidades</option>
+          </select>
+          <select id="filtro-construtora" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer">
+            <option value="">Todas as construtoras</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-display font-bold text-brand-800">Empreendimentos</h2>
+        <p id="resultado-count" class="text-sm text-gray-500 mt-1"></p>
+      </div>
+    </div>
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    <div id="loading-grid" class="flex justify-center py-16">
+      <div class="w-10 h-10 border-4 border-blue-200 border-t-brand-600 rounded-full animate-spin"></div>
+    </div>
+    <div id="empty-state" class="hidden text-center py-16">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      </div>
+      <p class="text-gray-500">Nenhum empreendimento encontrado</p>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════ VIEW: EMPREENDIMENTO (detalhe) ═══════════ -->
+<div id="view-empreendimento" class="view-section">
+  <nav id="nav-sections" class="bg-white border-b border-gray-100 sticky top-16 z-40 overflow-x-auto">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-1">
+      <a onclick="scrollToSec('fotos-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Fotos</a>
+      <a onclick="scrollToSec('info-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Informações</a>
+      <a onclick="scrollToSec('book-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Book</a>
+      <a onclick="scrollToSec('tabela-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Tabela</a>
+      <a onclick="scrollToSec('plantas-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Plantas</a>
+      <a onclick="scrollToSec('mapa-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Mapa</a>
+      <a onclick="scrollToSec('contato-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Contato</a>
+    </div>
+  </nav>
+  <div id="emp-loading" class="flex justify-center py-32">
+    <div class="w-10 h-10 border-4 border-blue-200 border-t-brand-600 rounded-full animate-spin"></div>
+  </div>
+  <div id="emp-conteudo" class="hidden fade-in">
+    <section class="bg-brand-800 text-white py-10 sm:py-16">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <a href="#home" class="inline-flex items-center gap-1 text-blue-300 hover:text-white text-sm mb-4 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Voltar
+        </a>
+        <p class="text-blue-200 text-sm font-medium mb-2" id="emp-construtora"></p>
+        <h1 class="font-display text-3xl sm:text-4xl font-bold mb-3" id="emp-nome"></h1>
+        <p class="text-blue-200 flex items-center gap-1 mb-6" id="emp-local">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span></span>
+        </p>
+        <div class="flex flex-wrap gap-4 sm:gap-8">
+          <div><p class="text-xs text-blue-300 uppercase tracking-wider">A partir de</p><p class="text-2xl font-bold" id="emp-valor"></p></div>
+          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Metragem</p><p class="text-lg font-semibold" id="emp-metragem"></p></div>
+          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Tipologia</p><p class="text-lg font-semibold" id="emp-tipologia"></p></div>
+          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Entrega</p><p class="text-lg font-semibold" id="emp-entrega"></p></div>
+        </div>
+      </div>
+    </section>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
+      <section id="fotos-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Galeria de Fotos</h2>
+        <div id="galeria" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+        <p id="sem-fotos" class="hidden text-gray-400 text-sm py-8 text-center">Fotos em breve</p>
+      </section>
+      <section id="info-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Sobre o Empreendimento</h2>
+        <div id="emp-descricao" class="text-gray-600 leading-relaxed whitespace-pre-line"></div>
+        <div id="emp-obs" class="mt-4 hidden"><span class="inline-block bg-amber-50 text-amber-700 text-sm px-3 py-1 rounded-lg"></span></div>
+      </section>
+      <section id="video-sec" class="hidden">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Vídeo</h2>
+        <div class="aspect-video rounded-xl overflow-hidden bg-gray-100" id="video-container"></div>
+      </section>
+      <section id="book-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Book</h2>
+        <div id="book-list" class="space-y-2"></div>
+        <p id="sem-book" class="hidden text-gray-400 text-sm py-4 text-center">Book em breve</p>
+      </section>
+      <section id="tabela-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Tabela de Preços</h2>
+        <div id="tabela-list" class="space-y-2"></div>
+        <p id="sem-tabela" class="hidden text-gray-400 text-sm py-4 text-center">Tabela em breve</p>
+      </section>
+      <section id="plantas-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Plantas</h2>
+        <div id="plantas-list" class="space-y-2"></div>
+        <p id="sem-plantas" class="hidden text-gray-400 text-sm py-4 text-center">Plantas em breve</p>
+      </section>
+      <section id="mapa-sec">
+        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Localização</h2>
+        <div id="mapa-container" class="rounded-xl overflow-hidden bg-gray-100 aspect-video"></div>
+        <p id="sem-mapa" class="hidden text-gray-400 text-sm py-4 text-center">Localização em breve</p>
+      </section>
+      <section id="contato-sec" class="bg-brand-800 text-white rounded-2xl p-6 sm:p-10">
+        <h2 class="font-display font-bold text-xl mb-2">Interessado?</h2>
+        <p class="text-blue-200 mb-6 text-sm">Entre em contato com nosso time de especialistas</p>
+        <div class="flex flex-wrap gap-3">
+          <a id="btn-whatsapp" href="#" target="_blank" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Falar com Corretor
+          </a>
+          <button id="btn-compartilhar" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Compartilhar
+          </button>
+          <button id="btn-copiar" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            Copiar Link
+          </button>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: LOGIN ═══════════ -->
+<div id="view-login" class="view-section">
+  <div class="min-h-screen bg-brand-900 flex items-center justify-center p-4">
+    <div class="w-full max-w-sm">
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><span class="text-white font-bold text-xl">LP</span></div>
+        <h1 class="font-display font-bold text-2xl text-white mb-1">Lopes Prime</h1>
+        <p class="text-blue-300 text-sm">Área Administrativa</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 shadow-2xl">
+        <div id="login-error" class="hidden mb-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl"></div>
+        <div class="space-y-4">
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label><input id="login-email" type="email" placeholder="admin@lopesprime.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Senha</label><input id="login-senha" type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
+          <button id="btn-login" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2">
+            <span>Entrar</span>
+            <svg id="login-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          </button>
+        </div>
+      </div>
+      <a href="#home" class="block text-center mt-6 text-blue-300 hover:text-white text-sm transition">← Voltar ao Portal</a>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ VIEW: ADMIN ═══════════ -->
+<div id="view-admin" class="view-section">
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-100 z-50 transform -translate-x-full lg:translate-x-0 transition-transform">
+    <div class="p-5 border-b border-gray-100">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">LP</span></div>
+        <div><span class="font-display font-bold text-brand-800 text-base">Lopes Prime</span><p class="text-xs text-gray-400">Administração</p></div>
+      </div>
+    </div>
+    <nav class="p-3 space-y-1">
+      <button onclick="showAdminView('dashboard')" class="sidebar-link active w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition" data-view="dashboard">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </button>
+      <button onclick="showAdminView('empreendimentos')" class="sidebar-link w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition" data-view="empreendimentos">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+        Empreendimentos
+      </button>
+      <button onclick="showAdminView('novo')" class="sidebar-link w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition" data-view="novo">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+        Novo Empreendimento
+      </button>
+      <button onclick="showAdminView('config')" class="sidebar-link w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition" data-view="config">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Configurações
+      </button>
+      <hr class="my-3 border-gray-100">
+      <a href="#home" class="w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition block">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Ver Portal
+      </a>
+      <button onclick="sair()" class="w-full text-left flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sair
+      </button>
+    </nav>
+  </aside>
+  <div class="lg:ml-64 min-h-screen">
+    <header class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-30">
+      <div class="px-4 sm:px-6 h-14 flex items-center justify-between">
+        <button onclick="toggleSidebar()" class="lg:hidden text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <a href="#home" class="text-sm text-brand-600 hover:underline">Ver Portal →</a>
+      </div>
+    </header>
+    <main class="p-4 sm:p-6 max-w-5xl">
+      <div id="adm-dashboard" class="fade-in">
+        <h1 class="font-display font-bold text-2xl text-brand-800 mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <div class="bg-white rounded-2xl p-6 border border-gray-100"><p class="text-sm text-gray-500 mb-1">Empreendimentos Ativos</p><p id="dash-count" class="text-3xl font-bold text-brand-800">-</p></div>
+          <div class="bg-white rounded-2xl p-6 border border-gray-100 flex items-center justify-center"><button onclick="showAdminView('novo')" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition">+ Cadastrar Novo</button></div>
+        </div>
+        <h2 class="font-semibold text-gray-700 mb-3">Últimos cadastrados</h2>
+        <div id="dash-recentes" class="space-y-2"></div>
+      </div>
+      <div id="adm-empreendimentos" class="hidden fade-in">
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="font-display font-bold text-2xl text-brand-800">Empreendimentos</h1>
+          <button onclick="showAdminView('novo')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition">+ Novo</button>
+        </div>
+        <input id="admin-busca" type="text" placeholder="Buscar..." class="w-full mb-4 px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white">
+        <div id="admin-lista" class="space-y-2"></div>
+      </div>
+      <div id="adm-novo" class="hidden fade-in">
+        <h1 id="form-title" class="font-display font-bold text-2xl text-brand-800 mb-6">Novo Empreendimento</h1>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 space-y-4">
+          <input type="hidden" id="f-id">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label><input id="f-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Construtora</label><input id="f-construtora" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Cidade *</label><input id="f-cidade" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Bairro</label><input id="f-bairro" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Metragem</label><input id="f-metragem" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 60 a 85 m²"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tipologia</label><input id="f-tipologia" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 2 e 3 Dorms / 1 Suíte"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Entrega</label><input id="f-entrega" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: Mar/2027 ou Pronto"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Valor Inicial (R$)</label><input id="f-valor" type="number" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 450000"></div>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label><textarea id="f-descricao" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none"></textarea></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Google Maps (embed URL)</label><input id="f-gmaps" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Cole o link do embed"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label><input id="f-whatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="5511999999999"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Vídeo YouTube (URL)</label><input id="f-video" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="https://youtube.com/watch?v=..."></div>
+          </div>
+          <div id="uploads-section" class="hidden border-t border-gray-100 pt-4 space-y-4">
+            <h3 class="font-semibold text-gray-700">Arquivos</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><label class="block text-sm font-medium text-gray-700 mb-1">Fotos</label><input type="file" id="f-fotos" multiple accept="image/*" class="text-sm"><div id="fotos-existentes" class="mt-2 flex flex-wrap gap-2"></div></div>
+              <div><label class="block text-sm font-medium text-gray-700 mb-1">Book (PDF)</label><input type="file" id="f-book" accept=".pdf" class="text-sm"><div id="book-existentes" class="mt-2 space-y-1"></div></div>
+              <div><label class="block text-sm font-medium text-gray-700 mb-1">Tabela (PDF)</label><input type="file" id="f-tabela" accept=".pdf" class="text-sm"><div id="tabela-existentes" class="mt-2 space-y-1"></div></div>
+              <div><label class="block text-sm font-medium text-gray-700 mb-1">Plantas (PDF)</label><input type="file" id="f-plantas" accept=".pdf" class="text-sm"><div id="plantas-existentes" class="mt-2 space-y-1"></div></div>
+            </div>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button onclick="salvarEmpreendimento()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
+            <button onclick="showAdminView('empreendimentos')" class="px-6 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div id="adm-config" class="hidden fade-in">
+        <h1 class="font-display font-bold text-2xl text-brand-800 mb-6">Configurações</h1>
+        <div class="bg-white rounded-2xl p-6 border border-gray-100 space-y-4 max-w-lg">
+          <input type="hidden" id="cfg-id">
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa</label><input id="cfg-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Telefone</label><input id="cfg-telefone" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label><input id="cfg-whatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="5511999999999"></div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Logo</label><input type="file" id="cfg-logo" accept="image/*" class="text-sm"><img id="cfg-logo-preview" src="" class="hidden mt-2 h-16 rounded-lg"></div>
+          <button onclick="salvarConfig()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════ FOOTER PÚBLICO ═══════════ -->
+<footer id="footer-public" class="bg-brand-900 text-white/60 py-10 mt-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+    <div class="flex items-center justify-center gap-2 mb-3">
+      <div class="w-6 h-6 bg-brand-600 rounded flex items-center justify-center"><span class="text-white text-xs font-bold">LP</span></div>
+      <span class="font-display font-semibold text-white text-sm">Lopes Prime</span>
+    </div>
+    <p class="text-xs">Portal de Empreendimentos — Grande ABC</p>
+  </div>
+</footer>
+
+<!-- WhatsApp FAB -->
+<a id="fab-whatsapp" href="#" target="_blank" class="fixed bottom-6 right-6 z-50 bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110">
+  <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+</a>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="fixed inset-0 bg-black/90 z-[9999] hidden items-center justify-center p-4">
+  <button id="lb-close" class="absolute top-4 right-4 text-white/70 hover:text-white text-3xl">&times;</button>
+  <button id="lb-prev" class="absolute left-4 text-white/70 hover:text-white text-4xl">&lsaquo;</button>
+  <button id="lb-next" class="absolute right-4 text-white/70 hover:text-white text-4xl">&rsaquo;</button>
+  <img id="lb-img" class="max-w-full max-h-[85vh] rounded-xl object-contain" src="" alt="">
+</div>
+
+<!-- TOAST -->
+<div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
+
+<!-- ═══════════ JAVASCRIPT UNIFICADO ═══════════ -->
+<script>
+(function() {
+  'use strict';
+
+  const SUPABASE_URL = 'https://rxsqlxsfzmwfrlldvsas.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4c3FseHNmem13ZnJsbGR2c2FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMTExOTgsImV4cCI6MjA5ODU4NzE5OH0.sBIuhdyjkf8FLCWG2PO5y0ScrB7rld8U0fY39BmvdI8';
+
+  if (typeof supabase === 'undefined') {
+    document.body.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;font-family:sans-serif;text-align:center">'
+      + '<h2 style="color:#b91c1c;margin-bottom:12px">Não foi possível carregar o Supabase</h2>'
+      + '<p style="color:#374151;line-height:1.5">A biblioteca do Supabase não carregou (sem internet, CDN bloqueado, ou arquivo aberto direto pelo Explorer). '
+      + 'Verifique sua conexão e recarregue a página. Se estiver abrindo o arquivo com duplo clique (file://), rode por um servidor local (Live Server / <code>python -m http.server</code>) e tente novamente.</p>'
+      + '<button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#1e40af;color:#fff;border:none;border-radius:8px;cursor:pointer">Recarregar</button>'
+      + '</div>';
+    return;
+  }
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── Helpers ──
+  function formatarMoeda(v) {
+    if (!v) return '-';
+    return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
+  }
+  function gerarSlug(t) {
+    return t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
+  }
+  function gerarMsgCompartilhamento(nome) {
+    return encodeURIComponent('Olá!\n\nSegue todas as informações do empreendimento *' + nome + '*.\n\nNo link você encontrará:\n📸 Fotos\n📄 Book\n📑 Tabela\n📐 Plantas\n💰 Valores\n📍 Localização\n\nQualquer dúvida estou à disposição.');
+  }
+  function mostrarToast(msg, tipo) {
+    tipo = tipo || 'success';
+    var c = document.getElementById('toast-container');
+    var cores = {success:'bg-emerald-500',error:'bg-red-500',info:'bg-blue-500',warning:'bg-amber-500'};
+    var icons = {success:'✓',error:'✕',info:'ℹ',warning:'⚠'};
+    var t = document.createElement('div');
+    t.className = cores[tipo] + ' text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-x-full opacity-0 transition-all duration-300 text-sm';
+    t.innerHTML = '<span class="text-lg">' + icons[tipo] + '</span><span>' + msg + '</span>';
+    c.appendChild(t);
+    requestAnimationFrame(function() { t.classList.remove('translate-x-full','opacity-0'); });
+    setTimeout(function() { t.classList.add('translate-x-full','opacity-0'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+  }
+  function confirmar(msg) {
+    return new Promise(function(resolve) {
+      var o = document.createElement('div');
+      o.className = 'fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4';
+      o.innerHTML = '<div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"><p class="text-gray-800 text-base mb-6">' + msg + '</p><div class="flex gap-3 justify-end"><button id="confirm-cancel" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition text-sm font-medium">Cancelar</button><button id="confirm-ok" class="px-5 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition text-sm font-medium">Confirmar</button></div></div>';
+      document.body.appendChild(o);
+      o.querySelector('#confirm-cancel').onclick = function() { o.remove(); resolve(false); };
+      o.querySelector('#confirm-ok').onclick = function() { o.remove(); resolve(true); };
+    });
+  }
+  function extractYouTubeId(url) { var m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s?]+)/); return m ? m[1] : null; }
+  window.scrollToSec = function(id) { var el = document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
+
+  // ── Estado ──
+  var todosEmpreendimentos = [];
+  var todosEmpsAdmin = [];
+  var currentEmpFotos = [];
+  var lbIndex = 0;
+  var homeLoaded = false;
+
+  // ── Router ──
+  function getRoute() {
+    var h = location.hash.replace('#','') || 'home';
+    if (h.indexOf('empreendimento/') === 0) return { view: 'empreendimento', slug: h.split('/')[1] };
+    return { view: h, slug: null };
+  }
+
+  async function navigate() {
+    var route = getRoute();
+    var view = route.view;
+    var slug = route.slug;
+    document.querySelectorAll('.view-section').forEach(function(v) { v.classList.remove('active'); });
+
+    var headerPublic = document.getElementById('header-public');
+    var footerPublic = document.getElementById('footer-public');
+    var fabWpp = document.getElementById('fab-whatsapp');
+
+    headerPublic.style.display = '';
+    footerPublic.style.display = '';
+    fabWpp.style.display = '';
+
+    if (view === 'home') {
+      document.getElementById('view-home').classList.add('active');
+      document.title = 'Lopes Prime — Portal de Empreendimentos';
+      loadHome();
+    } else if (view === 'empreendimento' && slug) {
+      document.getElementById('view-empreendimento').classList.add('active');
+      loadEmpreendimento(slug);
+    } else if (view === 'login') {
+      headerPublic.style.display = 'none';
+      footerPublic.style.display = 'none';
+      fabWpp.style.display = 'none';
+      document.getElementById('view-login').classList.add('active');
+      document.title = 'Login — Lopes Prime';
+      checkIfAlreadyLogged();
+    } else if (view === 'admin') {
+      headerPublic.style.display = 'none';
+      footerPublic.style.display = 'none';
+      fabWpp.style.display = 'none';
+      document.getElementById('view-admin').classList.add('active');
+      document.title = 'Admin — Lopes Prime';
+      await checkAuth();
+    } else {
+      location.hash = '#home';
+    }
+    window.scrollTo(0,0);
+  }
+
+  window.addEventListener('hashchange', navigate);
+
+  // ══════════════════════════════════════
+  // HOME
+  // ══════════════════════════════════════
+  async function loadHome() {
+    if (homeLoaded) { renderGrid(todosEmpreendimentos); return; }
+    try {
+      var configRes = await sb.from('configuracoes').select('*').limit(1).maybeSingle();
+      var config = configRes.data;
+      if (config && config.whatsapp) document.getElementById('fab-whatsapp').href = 'https://wa.me/' + config.whatsapp;
+
+      var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
+      if (res.error) throw res.error;
+      todosEmpreendimentos = res.data || [];
+
+      // Limpa selects antes de popular (fix duplicação)
+      var fc = document.getElementById('filtro-cidade');
+      var fco = document.getElementById('filtro-construtora');
+      fc.innerHTML = '<option value="">Todas as cidades</option>';
+      fco.innerHTML = '<option value="">Todas as construtoras</option>';
+
+      var cidades = []; var construtoras = [];
+      todosEmpreendimentos.forEach(function(e) {
+        if (e.cidade && cidades.indexOf(e.cidade) === -1) cidades.push(e.cidade);
+        if (e.construtora && construtoras.indexOf(e.construtora) === -1) construtoras.push(e.construtora);
+      });
+      cidades.sort(); construtoras.sort();
+      cidades.forEach(function(c) { fc.insertAdjacentHTML('beforeend','<option value="'+c+'">'+c+'</option>'); });
+      construtoras.forEach(function(c) { fco.insertAdjacentHTML('beforeend','<option value="'+c+'">'+c+'</option>'); });
+
+      renderGrid(todosEmpreendimentos);
+      homeLoaded = true;
+    } catch(err) {
+      console.error('loadHome error:', err);
+      document.getElementById('loading-grid').classList.add('hidden');
+      document.getElementById('empty-state').classList.remove('hidden');
+    }
+  }
+
+  function filtrarHome() {
+    var t = document.getElementById('busca').value.toLowerCase().trim();
+    var c = document.getElementById('filtro-cidade').value;
+    var co = document.getElementById('filtro-construtora').value;
+    var f = todosEmpreendimentos.filter(function(e) {
+      if (t && e.nome.toLowerCase().indexOf(t) === -1) return false;
+      if (c && e.cidade !== c) return false;
+      if (co && e.construtora !== co) return false;
+      return true;
+    });
+    renderGrid(f);
+  }
+
+  function renderGrid(lista) {
+    var grid = document.getElementById('grid');
+    var lg = document.getElementById('loading-grid');
+    var es = document.getElementById('empty-state');
+    var rc = document.getElementById('resultado-count');
+    lg.classList.add('hidden');
+    grid.innerHTML = '';
+    if (!lista.length) { es.classList.remove('hidden'); rc.textContent = 'Nenhum resultado'; return; }
+    es.classList.add('hidden');
+    rc.textContent = lista.length + ' empreendimento' + (lista.length>1?'s':'');
+    lista.forEach(function(emp,i) {
+      var imgUrl = emp.imagem_principal || 'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome);
+      var card = document.createElement('a');
+      card.href = '#empreendimento/' + emp.slug;
+      card.className = 'card-hover bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 fade-in block';
+      card.style.animationDelay = (i*0.05) + 's';
+      card.innerHTML =
+        '<div class="aspect-[16/10] overflow-hidden bg-gray-100 relative">' +
+          '<img src="' + imgUrl + '" alt="' + emp.nome + '" class="w-full h-full object-cover" loading="lazy" onerror="this.src=\'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome) + '\'">' +
+          (emp.entrega==='Pronto'?'<span class="absolute top-3 left-3 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full">Pronto</span>':'') +
+        '</div>' +
+        '<div class="p-5">' +
+          '<h3 class="font-semibold text-brand-800 text-base leading-snug mb-2">' + emp.nome + '</h3>' +
+          '<p class="text-gray-500 text-sm mb-3 flex items-center gap-1">' +
+            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' +
+            emp.cidade + (emp.bairro?' · '+emp.bairro:'') +
+          '</p>' +
+          '<div class="flex flex-wrap gap-2 mb-4">' +
+            (emp.metragem?'<span class="text-xs bg-blue-50 text-brand-600 px-2 py-1 rounded-lg">'+emp.metragem+'</span>':'') +
+            (emp.tipologia?'<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">'+emp.tipologia+'</span>':'') +
+          '</div>' +
+          '<div class="flex items-center justify-between pt-3 border-t border-gray-100">' +
+            '<div><p class="text-xs text-gray-400">A partir de</p><p class="text-brand-600 font-bold text-base">' + formatarMoeda(emp.valor_inicial) + '</p></div>' +
+            (emp.entrega&&emp.entrega!=='Pronto'?'<div class="text-right"><p class="text-xs text-gray-400">Entrega</p><p class="text-sm font-medium text-gray-700">'+emp.entrega+'</p></div>':'') +
+          '</div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+  }
+
+  var timer;
+  document.getElementById('busca').addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(filtrarHome,300)});
+  document.getElementById('filtro-cidade').addEventListener('change',filtrarHome);
+  document.getElementById('filtro-construtora').addEventListener('change',filtrarHome);
+
+  // ══════════════════════════════════════
+  // EMPREENDIMENTO (detalhe)
+  // ══════════════════════════════════════
+  async function loadEmpreendimento(slug) {
+    var loading = document.getElementById('emp-loading');
+    var conteudo = document.getElementById('emp-conteudo');
+    loading.classList.remove('hidden');
+    conteudo.classList.add('hidden');
+
+    try {
+      var res = await sb.from('empreendimentos').select('*, arquivos(*)').eq('slug',slug).single();
+      if (res.error || !res.data) { location.hash='#home'; return; }
+      var emp = res.data;
+      document.title = emp.nome + ' — Lopes Prime';
+
+      document.getElementById('emp-nome').textContent = emp.nome;
+      document.getElementById('emp-construtora').textContent = emp.construtora || '';
+      document.getElementById('emp-local').querySelector('span').textContent = emp.cidade + (emp.bairro?' · '+emp.bairro:'');
+      document.getElementById('emp-valor').textContent = formatarMoeda(emp.valor_inicial);
+      document.getElementById('emp-metragem').textContent = emp.metragem || '-';
+      document.getElementById('emp-tipologia').textContent = emp.tipologia || '-';
+      document.getElementById('emp-entrega').textContent = emp.entrega || '-';
+      document.getElementById('emp-descricao').textContent = emp.descricao || 'Informações detalhadas em breve.';
+
+      var obsEl = document.getElementById('emp-obs');
+      if (emp.observacoes) { obsEl.classList.remove('hidden'); obsEl.querySelector('span').textContent = emp.observacoes; }
+      else obsEl.classList.add('hidden');
+
+      var configRes = await sb.from('configuracoes').select('*').limit(1).maybeSingle();
+      var config = configRes.data;
+      var wpp = emp.whatsapp || (config ? config.whatsapp : '') || '';
+
+      currentEmpFotos = (emp.arquivos||[]).filter(function(a){return a.tipo==='foto'});
+      var books = (emp.arquivos||[]).filter(function(a){return a.tipo==='book'});
+      var tabelas = (emp.arquivos||[]).filter(function(a){return a.tipo==='tabela'});
+      var plantas = (emp.arquivos||[]).filter(function(a){return a.tipo==='planta'});
+
+      var galeriaEl = document.getElementById('galeria');
+      galeriaEl.innerHTML = '';
+      var semFotos = document.getElementById('sem-fotos');
+      if (currentEmpFotos.length) {
+        semFotos.classList.add('hidden');
+        currentEmpFotos.forEach(function(f,i) { galeriaEl.innerHTML += '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="'+i+'"><img src="'+f.url+'" alt="" class="w-full h-full object-cover" loading="lazy"></div>'; });
+      } else { semFotos.classList.remove('hidden'); }
+
+      renderPdfs('book-list','sem-book',books,'📄 Book');
+      renderPdfs('tabela-list','sem-tabela',tabelas,'📑 Tabela');
+      renderPdfs('plantas-list','sem-plantas',plantas,'📐 Planta');
+
+      var videoSec = document.getElementById('video-sec');
+      if (emp.video_url) {
+        videoSec.classList.remove('hidden');
+        var vid = extractYouTubeId(emp.video_url);
+        if (vid) document.getElementById('video-container').innerHTML = '<iframe src="https://www.youtube.com/embed/'+vid+'" class="w-full h-full" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>';
+      } else videoSec.classList.add('hidden');
+
+      var mapaC = document.getElementById('mapa-container');
+      var semMapa = document.getElementById('sem-mapa');
+      if (emp.google_maps) {
+        semMapa.classList.add('hidden'); mapaC.classList.remove('hidden');
+        var src = emp.google_maps.indexOf('<iframe') !== -1 ? (emp.google_maps.match(/src="([^"]+)"/) || [])[1] : emp.google_maps;
+        if (src) mapaC.innerHTML = '<iframe src="'+src+'" class="w-full h-full border-0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+      } else { semMapa.classList.remove('hidden'); mapaC.classList.add('hidden'); }
+
+      var pageUrl = location.href;
+      document.getElementById('btn-whatsapp').href = 'https://wa.me/' + wpp + '?text=' + gerarMsgCompartilhamento(emp.nome) + '%0A%0A' + encodeURIComponent(pageUrl);
+      document.getElementById('btn-compartilhar').onclick = function() {
+        var msg = 'Olá!\n\nSegue todas as informações do empreendimento ' + emp.nome + '.\n\n' + pageUrl;
+        if (navigator.share) navigator.share({title:emp.nome,text:msg,url:pageUrl}); else window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+      };
+      document.getElementById('btn-copiar').onclick = async function() { await navigator.clipboard.writeText(pageUrl); mostrarToast('Link copiado!','success'); };
+
+      loading.classList.add('hidden');
+      conteudo.classList.remove('hidden');
+    } catch(err) { console.error('loadEmpreendimento error:', err); location.hash='#home'; }
+  }
+
+  function renderPdfs(containerId, emptyId, files, label) {
+    var c = document.getElementById(containerId);
+    c.innerHTML = '';
+    if (files.length) {
+      document.getElementById(emptyId).classList.add('hidden');
+      files.forEach(function(f) { c.innerHTML += '<a href="'+f.url+'" target="_blank" class="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:border-brand-200 hover:shadow-sm transition"><div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-500 shrink-0"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-800 truncate">'+(f.nome||label)+'</p><p class="text-xs text-gray-400">PDF</p></div><svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>'; });
+    } else {
+      document.getElementById(emptyId).classList.remove('hidden');
+    }
+  }
+
+  // Lightbox
+  var lb = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lb-img');
+  document.getElementById('galeria').addEventListener('click', function(e) {
+    var item = e.target.closest('.gallery-img');
+    if (!item || !currentEmpFotos.length) return;
+    lbIndex = parseInt(item.dataset.index);
+    lbImg.src = currentEmpFotos[lbIndex].url;
+    lb.classList.remove('hidden'); lb.classList.add('flex');
+  });
+  document.getElementById('lb-close').onclick = function() { lb.classList.add('hidden'); lb.classList.remove('flex'); };
+  document.getElementById('lb-prev').onclick = function() { lbIndex = (lbIndex-1+currentEmpFotos.length)%currentEmpFotos.length; lbImg.src = currentEmpFotos[lbIndex].url; };
+  document.getElementById('lb-next').onclick = function() { lbIndex = (lbIndex+1)%currentEmpFotos.length; lbImg.src = currentEmpFotos[lbIndex].url; };
+  lb.addEventListener('click', function(e) { if(e.target===lb){lb.classList.add('hidden');lb.classList.remove('flex')} });
+  document.addEventListener('keydown', function(e) {
+    if (!lb.classList.contains('flex')) return;
+    if (e.key==='Escape') { lb.classList.add('hidden'); lb.classList.remove('flex'); }
+    if (e.key==='ArrowLeft') document.getElementById('lb-prev').click();
+    if (e.key==='ArrowRight') document.getElementById('lb-next').click();
+  });
+
+  // ══════════════════════════════════════
+  // LOGIN
+  // ══════════════════════════════════════
+  async function checkIfAlreadyLogged() {
+    try {
+      var res = await sb.auth.getSession();
+      if (res.data.session) location.hash = '#admin';
+    } catch(err) { console.error('Erro ao verificar sessão:', err); }
+  }
+
+  document.getElementById('btn-login').addEventListener('click', async function() {
+    var email = document.getElementById('login-email').value.trim();
+    var senha = document.getElementById('login-senha').value;
+    var errEl = document.getElementById('login-error');
+    var btn = document.getElementById('btn-login');
+    var spin = document.getElementById('login-spinner');
+    if (!email||!senha) { errEl.textContent='Preencha todos os campos.'; errEl.classList.remove('hidden'); return; }
+    btn.disabled = true; spin.classList.remove('hidden'); errEl.classList.add('hidden');
+    try {
+      var res = await sb.auth.signInWithPassword({email:email,password:senha});
+      if (res.error) throw res.error;
+      location.hash = '#admin';
+    } catch(err) {
+      errEl.textContent = 'E-mail ou senha inválidos.'; errEl.classList.remove('hidden');
+      btn.disabled = false; spin.classList.add('hidden');
+    }
+  });
+  document.getElementById('login-senha').addEventListener('keypress',function(e){if(e.key==='Enter')document.getElementById('btn-login').click()});
+
+  // ══════════════════════════════════════
+  // ADMIN
+  // ══════════════════════════════════════
+  async function checkAuth() {
+    try {
+      var res = await sb.auth.getSession();
+      if (!res.data.session) { location.hash='#login'; return; }
+      loadDashboard();
+    } catch(err) {
+      console.error('Erro ao verificar autenticação:', err);
+      mostrarToast('Erro ao verificar login. Tente novamente.','error');
+      location.hash = '#login';
+    }
+  }
+
+  window.showAdminView = function(view) {
+    ['adm-dashboard','adm-empreendimentos','adm-novo','adm-config'].forEach(function(id) { document.getElementById(id).classList.add('hidden'); });
+    document.getElementById('adm-'+view).classList.remove('hidden');
+    document.querySelectorAll('.sidebar-link').forEach(function(el) { el.classList.toggle('active', el.dataset.view === view); });
+    document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('sidebar-overlay').classList.add('hidden');
+    if (view==='dashboard') loadDashboard();
+    if (view==='empreendimentos') loadAdminEmpreendimentos();
+    if (view==='novo') resetForm();
+    if (view==='config') loadConfig();
+  };
+
+  window.toggleSidebar = function() {
+    document.getElementById('sidebar').classList.toggle('-translate-x-full');
+    document.getElementById('sidebar-overlay').classList.toggle('hidden');
+  };
+
+  async function loadDashboard() {
+    var countRes = await sb.from('empreendimentos').select('*',{count:'exact',head:true}).eq('ativo',true);
+    document.getElementById('dash-count').textContent = countRes.count||0;
+    var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('created_at',{ascending:false}).limit(5);
+    document.getElementById('dash-recentes').innerHTML = (res.data||[]).map(function(e) { return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'')+'</p></div><span class="text-sm font-medium text-brand-600">'+formatarMoeda(e.valor_inicial)+'</span></div>'; }).join('');
+  }
+
+  async function loadAdminEmpreendimentos() {
+    var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
+    todosEmpsAdmin = res.data||[];
+    renderAdminLista(todosEmpsAdmin);
+  }
+
+  function renderAdminLista(lista) {
+    document.getElementById('admin-lista').innerHTML = lista.map(function(e) {
+      return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-medium text-sm text-gray-800 truncate">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'-')+' · '+formatarMoeda(e.valor_inicial)+'</p></div><div class="flex gap-2 shrink-0"><button onclick="editarEmp(\''+e.id+'\')" class="text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="excluirEmp(\''+e.id+'\',\''+e.nome.replace(/'/g,"\\'")+'\')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>';
+    }).join('');
+  }
+
+  document.getElementById('admin-busca').addEventListener('input', function(e) {
+    var t = e.target.value.toLowerCase();
+    renderAdminLista(todosEmpsAdmin.filter(function(emp) { return emp.nome.toLowerCase().indexOf(t)!==-1 || emp.cidade.toLowerCase().indexOf(t)!==-1; }));
+  });
+
+  function resetForm() {
+    document.getElementById('form-title').textContent = 'Novo Empreendimento';
+    document.getElementById('f-id').value = '';
+    ['f-nome','f-construtora','f-cidade','f-bairro','f-metragem','f-tipologia','f-entrega','f-valor','f-descricao','f-gmaps','f-whatsapp','f-video'].forEach(function(id) { document.getElementById(id).value=''; });
+    document.getElementById('uploads-section').classList.add('hidden');
+    ['fotos-existentes','book-existentes','tabela-existentes','plantas-existentes'].forEach(function(id) { document.getElementById(id).innerHTML=''; });
+  }
+
+  window.editarEmp = async function(id) {
+    var res = await sb.from('empreendimentos').select('*, arquivos(*)').eq('id',id).single();
+    if (!res.data) return;
+    var emp = res.data;
+    showAdminView('novo');
+    document.getElementById('form-title').textContent = 'Editar Empreendimento';
+    document.getElementById('f-id').value = emp.id;
+    document.getElementById('f-nome').value = emp.nome||'';
+    document.getElementById('f-construtora').value = emp.construtora||'';
+    document.getElementById('f-cidade').value = emp.cidade||'';
+    document.getElementById('f-bairro').value = emp.bairro||'';
+    document.getElementById('f-metragem').value = emp.metragem||'';
+    document.getElementById('f-tipologia').value = emp.tipologia||'';
+    document.getElementById('f-entrega').value = emp.entrega||'';
+    document.getElementById('f-valor').value = emp.valor_inicial||'';
+    document.getElementById('f-descricao').value = emp.descricao||'';
+    document.getElementById('f-gmaps').value = emp.google_maps||'';
+    document.getElementById('f-whatsapp').value = emp.whatsapp||'';
+    document.getElementById('f-video').value = emp.video_url||'';
+    document.getElementById('uploads-section').classList.remove('hidden');
+
+    var fotos = (emp.arquivos||[]).filter(function(a){return a.tipo==='foto'});
+    var books = (emp.arquivos||[]).filter(function(a){return a.tipo==='book'});
+    var tabelas_arr = (emp.arquivos||[]).filter(function(a){return a.tipo==='tabela'});
+    var plantas_arr = (emp.arquivos||[]).filter(function(a){return a.tipo==='planta'});
+
+    document.getElementById('fotos-existentes').innerHTML = fotos.map(function(f) { return '<div class="relative inline-block"><img src="'+f.url+'" class="w-16 h-16 object-cover rounded-lg"><button onclick="excluirArquivo(\''+f.id+'\')" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button></div>'; }).join('');
+    document.getElementById('book-existentes').innerHTML = books.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Book')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
+    document.getElementById('tabela-existentes').innerHTML = tabelas_arr.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Tabela')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
+    document.getElementById('plantas-existentes').innerHTML = plantas_arr.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Planta')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
+  };
+
+  window.salvarEmpreendimento = async function() {
+    var id = document.getElementById('f-id').value;
+    var nome = document.getElementById('f-nome').value.trim();
+    var cidade = document.getElementById('f-cidade').value.trim();
+    if (!nome||!cidade) { mostrarToast('Nome e Cidade são obrigatórios.','error'); return; }
+    var dados = {
+      nome: nome, cidade: cidade,
+      construtora: document.getElementById('f-construtora').value.trim()||null,
+      bairro: document.getElementById('f-bairro').value.trim()||null,
+      metragem: document.getElementById('f-metragem').value.trim()||null,
+      tipologia: document.getElementById('f-tipologia').value.trim()||null,
+      entrega: document.getElementById('f-entrega').value.trim()||null,
+      valor_inicial: parseFloat(document.getElementById('f-valor').value)||null,
+      descricao: document.getElementById('f-descricao').value.trim()||null,
+      google_maps: document.getElementById('f-gmaps').value.trim()||null,
+      whatsapp: document.getElementById('f-whatsapp').value.trim()||null,
+      video_url: document.getElementById('f-video').value.trim()||null,
+    };
+    if (!id) dados.slug = gerarSlug(nome);
+    try {
+      var empId = id;
+      if (id) {
+        var res = await sb.from('empreendimentos').update(dados).eq('id',id);
+        if (res.error) throw res.error;
+      } else {
+        var res = await sb.from('empreendimentos').insert(dados).select().single();
+        if (res.error) throw res.error;
+        empId = res.data.id;
+      }
+      await uploadFiles(empId,'f-fotos','foto','fotos');
+      await uploadFile(empId,'f-book','book','books');
+      await uploadFile(empId,'f-tabela','tabela','tabelas');
+      await uploadFile(empId,'f-plantas','planta','plantas');
+
+      // Atualizar imagem_principal com primeira foto
+      var fotosRes = await sb.from('arquivos').select('url').eq('empreendimento_id',empId).eq('tipo','foto').order('created_at').limit(1);
+      if (fotosRes.data && fotosRes.data.length > 0) {
+        await sb.from('empreendimentos').update({imagem_principal: fotosRes.data[0].url}).eq('id',empId);
+      }
+
+      homeLoaded = false;
+      mostrarToast(id?'Empreendimento atualizado!':'Empreendimento cadastrado!','success');
+      showAdminView('empreendimentos');
+    } catch(err) { console.error(err); mostrarToast('Erro ao salvar: '+err.message,'error'); }
+  };
+
+  async function uploadFiles(empId,inputId,tipo,bucket) {
+    var input = document.getElementById(inputId);
+    if (!input.files.length) return;
+    for (var i=0; i<input.files.length; i++) {
+      var file = input.files[i];
+      var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name;
+      var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
+      if (res.error) { console.error(res.error); continue; }
+      var urlData = sb.storage.from(bucket).getPublicUrl(path);
+      await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+    }
+  }
+
+  async function uploadFile(empId,inputId,tipo,bucket) {
+    var input = document.getElementById(inputId);
+    if (!input.files.length) return;
+    var file = input.files[0];
+    var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name;
+    var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
+    if (res.error) { console.error(res.error); return; }
+    var urlData = sb.storage.from(bucket).getPublicUrl(path);
+    await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+  }
+
+  window.excluirEmp = async function(id,nome) {
+    if (!(await confirmar('Excluir "'+nome+'"? Esta ação não pode ser desfeita.'))) return;
+    var res = await sb.from('empreendimentos').delete().eq('id',id);
+    if (res.error) { mostrarToast('Erro ao excluir','error'); return; }
+    homeLoaded = false;
+    mostrarToast('Empreendimento excluído.','success');
+    loadAdminEmpreendimentos();
+  };
+
+  window.excluirArquivo = async function(id) {
+    var res = await sb.from('arquivos').delete().eq('id',id);
+    if (res.error) { mostrarToast('Erro ao remover arquivo','error'); return; }
+    mostrarToast('Arquivo removido.','success');
+    var empId = document.getElementById('f-id').value;
+    if (empId) editarEmp(empId);
+  };
+
+  async function loadConfig() {
+    var res = await sb.from('configuracoes').select('*').limit(1).maybeSingle();
+    if (!res.data) return;
+    var data = res.data;
+    document.getElementById('cfg-id').value = data.id;
+    document.getElementById('cfg-nome').value = data.nome_empresa||'';
+    document.getElementById('cfg-telefone').value = data.telefone||'';
+    document.getElementById('cfg-whatsapp').value = data.whatsapp||'';
+    if (data.logo_url) { var img = document.getElementById('cfg-logo-preview'); img.src=data.logo_url; img.classList.remove('hidden'); }
+  }
+
+  window.salvarConfig = async function() {
+    var id = document.getElementById('cfg-id').value;
+    var dados = {
+      nome_empresa: document.getElementById('cfg-nome').value.trim(),
+      telefone: document.getElementById('cfg-telefone').value.trim(),
+      whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
+    };
+    var logoInput = document.getElementById('cfg-logo');
+    if (logoInput.files.length) {
+      var file = logoInput.files[0];
+      var path = 'logo-'+Date.now()+'.'+file.name.split('.').pop();
+      var res = await sb.storage.from('logos').upload(path,file,{upsert:true});
+      if (!res.error) { var urlData = sb.storage.from('logos').getPublicUrl(path); dados.logo_url = urlData.data.publicUrl; }
+    }
+    var res = await sb.from('configuracoes').update(dados).eq('id',id);
+    if (res.error) { mostrarToast('Erro ao salvar','error'); return; }
+    mostrarToast('Configurações salvas!','success');
+  };
+
+  window.sair = async function() {
+    await sb.auth.signOut();
+    location.hash = '#login';
+  };
+
+  // ── Init ──
+  navigate();
+
+})();
+</script>
+</body>
+</html>
