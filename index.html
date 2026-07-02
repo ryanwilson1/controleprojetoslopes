@@ -6,7 +6,7 @@
   <title>Lopes Prime — Portal de Empreendimentos</title>
   <meta name="description" content="Encontre o empreendimento ideal no Grande ABC. Lopes Prime - Portal de Empreendimentos.">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';s.onerror=function(){window.__sbLoadFailed=true;};document.head.appendChild(s);"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
   <script>
@@ -370,6 +370,16 @@
   const SUPABASE_URL = 'https://rxsqlxsfzmwfrlldvsas.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ4c3FseHNmem13ZnJsbGR2c2FzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMTExOTgsImV4cCI6MjA5ODU4NzE5OH0.sBIuhdyjkf8FLCWG2PO5y0ScrB7rld8U0fY39BmvdI8';
 
+  if (typeof supabase === 'undefined') {
+    document.body.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;font-family:sans-serif;text-align:center">'
+      + '<h2 style="color:#b91c1c;margin-bottom:12px">Não foi possível carregar o Supabase</h2>'
+      + '<p style="color:#374151;line-height:1.5">A biblioteca do Supabase não carregou (sem internet, CDN bloqueado, ou arquivo aberto direto pelo Explorer). '
+      + 'Verifique sua conexão e recarregue a página. Se estiver abrindo o arquivo com duplo clique (file://), rode por um servidor local (Live Server / <code>python -m http.server</code>) e tente novamente.</p>'
+      + '<button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#1e40af;color:#fff;border:none;border-radius:8px;cursor:pointer">Recarregar</button>'
+      + '</div>';
+    return;
+  }
+
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // ── Helpers ──
@@ -674,8 +684,10 @@
   // LOGIN
   // ══════════════════════════════════════
   async function checkIfAlreadyLogged() {
-    var res = await sb.auth.getSession();
-    if (res.data.session) location.hash = '#admin';
+    try {
+      var res = await sb.auth.getSession();
+      if (res.data.session) location.hash = '#admin';
+    } catch(err) { console.error('Erro ao verificar sessão:', err); }
   }
 
   document.getElementById('btn-login').addEventListener('click', async function() {
@@ -701,9 +713,15 @@
   // ADMIN
   // ══════════════════════════════════════
   async function checkAuth() {
-    var res = await sb.auth.getSession();
-    if (!res.data.session) { location.hash='#login'; return; }
-    loadDashboard();
+    try {
+      var res = await sb.auth.getSession();
+      if (!res.data.session) { location.hash='#login'; return; }
+      loadDashboard();
+    } catch(err) {
+      console.error('Erro ao verificar autenticação:', err);
+      mostrarToast('Erro ao verificar login. Tente novamente.','error');
+      location.hash = '#login';
+    }
   }
 
   window.showAdminView = function(view) {
