@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lopes Prime — Portal de Empreendimentos</title>
-  <meta name="description" content="Encontre o empreendimento ideal no Grande ABC. Lopes Prime - Portal de Empreendimentos.">
+  <title>Lopes Prime — Portal do Corretor</title>
+  <meta name="description" content="Portal de empreendimentos para corretores — Lopes Prime.">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="var s=document.createElement('script');s.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js';s.onerror=function(){window.__sbLoadFailed=true;};document.head.appendChild(s);"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,171 +25,234 @@
     }
   </script>
   <style>
-    .card-hover{transition:transform .2s,box-shadow .2s}
-    .card-hover:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.1)}
-    .fade-in{animation:fadeIn .4s ease-out}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-    .hero-gradient{background:linear-gradient(135deg,#0f2240 0%,#1e40af 50%,#3b82f6 100%)}
-    input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.2);border-color:#3b82f6}
-    .gallery-img{cursor:pointer;transition:transform .2s}
-    .gallery-img:hover{transform:scale(1.03)}
-    .sidebar-link.active{background:rgba(59,130,246,.1);color:#1e40af}
+    .card-hover{transition:transform .25s ease,box-shadow .25s ease}
+    .card-hover:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(0,0,0,.12)}
+    .fade-in{animation:fadeIn .4s ease-out both}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .hero-gradient{background:linear-gradient(135deg,#0a1628 0%,#1e3a5f 40%,#1e40af 100%)}
+    input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.15);border-color:#3b82f6}
+    .gallery-img{cursor:pointer;transition:transform .25s ease}
+    .gallery-img:hover{transform:scale(1.04)}
+    .sidebar-link.active{background:rgba(59,130,246,.08);color:#1e40af;font-weight:500}
     html{scroll-behavior:smooth}
     .view-section{display:none}
     .view-section.active{display:block}
+    .tag-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:8px;font-weight:500}
+    .share-bar{backdrop-filter:blur(12px);background:rgba(15,34,64,.85)}
+    .nav-pill{position:relative;padding:12px 16px;font-size:13px;white-space:nowrap;transition:color .2s}
+    .nav-pill::after{content:'';position:absolute;bottom:0;left:50%;width:0;height:2px;background:#3b82f6;transition:all .2s;transform:translateX(-50%)}
+    .nav-pill:hover{color:#1e40af}
+    .nav-pill:hover::after,.nav-pill.active-pill::after{width:70%}
+    .detail-stat{padding:12px 0}
+    .detail-stat+.detail-stat{border-left:1px solid rgba(255,255,255,.15);padding-left:24px;margin-left:24px}
+    @media(max-width:640px){.detail-stat+.detail-stat{border-left:none;padding-left:0;margin-left:0}}
+    .pdf-card{transition:border-color .2s,box-shadow .2s}
+    .pdf-card:hover{border-color:#bfdbfe;box-shadow:0 4px 16px rgba(59,130,246,.08)}
+    .badge-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:6px}
+    /* IA Assistant */
+    .ia-msg{max-width:88%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.55;word-break:break-word}
+    .ia-bot{background:#f0f4ff;color:#1e3a5f;border-bottom-left-radius:4px;align-self:flex-start}
+    .ia-user{background:#1e40af;color:#fff;border-bottom-right-radius:4px;align-self:flex-end;margin-left:auto}
+    .ia-typing{display:inline-flex;gap:4px;padding:10px 18px}
+    .ia-typing span{width:6px;height:6px;background:#93c5fd;border-radius:50%;animation:iaBounce .6s infinite alternate}
+    .ia-typing span:nth-child(2){animation-delay:.15s}
+    .ia-typing span:nth-child(3){animation-delay:.3s}
+    @keyframes iaBounce{to{opacity:.3;transform:translateY(-4px)}}
+    .ia-emp-card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-top:6px;cursor:pointer;transition:border-color .2s}
+    .ia-emp-card:hover{border-color:#93c5fd}
   </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800 antialiased">
 
-<!-- ═══════════ HEADER PÚBLICO ═══════════ -->
-<header id="header-public" class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+<!-- ═══════════ HEADER PÚBLICO (CORRETOR) ═══════════ -->
+<header id="header-public" class="bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-    <a href="#home" class="flex items-center gap-2">
-      <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-        <span class="text-white font-bold text-sm">LP</span>
+    <a href="#home" class="flex items-center gap-2.5">
+      <div class="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center shadow-sm">
+        <span class="text-white font-bold text-sm tracking-tight">LP</span>
       </div>
-      <span class="font-display font-bold text-brand-800 text-lg tracking-tight">Lopes Prime</span>
+      <div class="leading-tight">
+        <span class="font-display font-bold text-brand-800 text-base tracking-tight block">Lopes Prime</span>
+        <span class="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Portal do Corretor</span>
+      </div>
     </a>
-    <a href="#login" class="text-gray-400 hover:text-brand-600 transition text-sm">Admin</a>
+    <a href="#login" class="text-gray-300 hover:text-brand-600 transition text-xs tracking-wide">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    </a>
   </div>
 </header>
 
 <!-- ═══════════ VIEW: HOME ═══════════ -->
 <div id="view-home" class="view-section">
-  <section class="hero-gradient text-white py-16 sm:py-24 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10">
-      <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3"></div>
-      <div class="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/3 -translate-x-1/4"></div>
+  <section class="hero-gradient text-white py-14 sm:py-20 relative overflow-hidden">
+    <div class="absolute inset-0 opacity-[0.04]">
+      <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full -translate-y-1/2 translate-x-1/3"></div>
+      <div class="absolute bottom-0 left-0 w-80 h-80 bg-white rounded-full translate-y-1/3 -translate-x-1/4"></div>
     </div>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 relative">
-      <p class="text-blue-200 text-sm font-medium tracking-widest uppercase mb-3">Portal de Empreendimentos</p>
-      <h1 class="font-display text-3xl sm:text-5xl font-bold mb-4 leading-tight">Encontre seu <br class="hidden sm:block">novo lar</h1>
-      <p class="text-blue-100 text-base sm:text-lg max-w-xl mb-8">Empreendimentos selecionados no Grande ABC com as melhores condições.</p>
-      <div class="bg-white rounded-2xl p-3 sm:p-4 shadow-2xl max-w-3xl">
-        <div class="flex flex-col sm:flex-row gap-3">
-          <div class="flex-1 relative">
-            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input id="busca" type="text" placeholder="Buscar empreendimento..." class="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 text-gray-800 placeholder-gray-400 border border-gray-200 text-sm">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+        <p class="text-blue-300/80 text-xs font-semibold tracking-[0.2em] uppercase">Catálogo Atualizado</p>
+      </div>
+      <h1 class="font-display text-3xl sm:text-5xl font-bold mb-3 leading-[1.15]">Encontre o empreendimento<br class="hidden sm:block"> e envie ao seu cliente</h1>
+      <p class="text-blue-200/70 text-sm sm:text-base max-w-lg mb-8">Busque, consulte os detalhes e compartilhe o link direto com todas as informações.</p>
+      <div class="bg-white rounded-2xl p-3 shadow-2xl shadow-black/20 max-w-3xl">
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="flex-1">
+            <input id="busca" type="text" placeholder="Nome do empreendimento..." class="w-full px-4 py-3 rounded-xl bg-gray-50 text-gray-800 placeholder-gray-400 border border-gray-200 text-sm focus:bg-white">
           </div>
-          <select id="filtro-cidade" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer">
+          <select id="filtro-cidade" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer min-w-[160px]">
             <option value="">Todas as cidades</option>
           </select>
-          <select id="filtro-construtora" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer">
+          <select id="filtro-construtora" class="px-4 py-3 rounded-xl bg-gray-50 text-gray-700 border border-gray-200 text-sm cursor-pointer min-w-[180px]">
             <option value="">Todas as construtoras</option>
           </select>
         </div>
       </div>
     </div>
   </section>
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-    <div class="flex items-center justify-between mb-8">
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-14">
+    <div class="flex items-center justify-between mb-6">
       <div>
-        <h2 class="text-xl sm:text-2xl font-display font-bold text-brand-800">Empreendimentos</h2>
-        <p id="resultado-count" class="text-sm text-gray-500 mt-1"></p>
+        <h2 class="text-lg sm:text-xl font-semibold text-brand-800">Empreendimentos</h2>
+        <p id="resultado-count" class="text-xs text-gray-400 mt-0.5"></p>
       </div>
     </div>
-    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-    <div id="loading-grid" class="flex justify-center py-16">
-      <div class="w-10 h-10 border-4 border-blue-200 border-t-brand-600 rounded-full animate-spin"></div>
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    <div id="loading-grid" class="flex justify-center py-20">
+      <div class="w-9 h-9 border-[3px] border-blue-100 border-t-brand-600 rounded-full animate-spin"></div>
     </div>
-    <div id="empty-state" class="hidden text-center py-16">
-      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+    <div id="empty-state" class="hidden text-center py-20">
+      <div class="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
       </div>
-      <p class="text-gray-500">Nenhum empreendimento encontrado</p>
+      <p class="text-gray-400 text-sm">Nenhum empreendimento encontrado</p>
+      <p class="text-gray-300 text-xs mt-1">Tente ajustar os filtros</p>
     </div>
   </section>
 </div>
 
 <!-- ═══════════ VIEW: EMPREENDIMENTO (detalhe) ═══════════ -->
 <div id="view-empreendimento" class="view-section">
+  <!-- Barra de navegação por seções -->
   <nav id="nav-sections" class="bg-white border-b border-gray-100 sticky top-16 z-40 overflow-x-auto">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex gap-1">
-      <a onclick="scrollToSec('fotos-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Fotos</a>
-      <a onclick="scrollToSec('info-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Informações</a>
-      <a onclick="scrollToSec('book-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Book</a>
-      <a onclick="scrollToSec('tabela-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Tabela</a>
-      <a onclick="scrollToSec('plantas-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Plantas</a>
-      <a onclick="scrollToSec('mapa-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Mapa</a>
-      <a onclick="scrollToSec('contato-sec')" class="px-4 py-3 text-sm text-gray-500 hover:text-brand-600 border-b-2 border-transparent whitespace-nowrap transition cursor-pointer">Contato</a>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex">
+      <a onclick="scrollToSec('fotos-sec')" class="nav-pill text-gray-400 cursor-pointer">Fotos</a>
+      <a onclick="scrollToSec('info-sec')" class="nav-pill text-gray-400 cursor-pointer">Informações</a>
+      <a onclick="scrollToSec('book-sec')" class="nav-pill text-gray-400 cursor-pointer">Book</a>
+      <a onclick="scrollToSec('tabela-sec')" class="nav-pill text-gray-400 cursor-pointer">Tabela</a>
+      <a onclick="scrollToSec('plantas-sec')" class="nav-pill text-gray-400 cursor-pointer">Plantas</a>
+      <a onclick="scrollToSec('mapa-sec')" class="nav-pill text-gray-400 cursor-pointer">Mapa</a>
     </div>
   </nav>
+
   <div id="emp-loading" class="flex justify-center py-32">
-    <div class="w-10 h-10 border-4 border-blue-200 border-t-brand-600 rounded-full animate-spin"></div>
+    <div class="w-9 h-9 border-[3px] border-blue-100 border-t-brand-600 rounded-full animate-spin"></div>
   </div>
+
   <div id="emp-conteudo" class="hidden fade-in">
-    <section class="bg-brand-800 text-white py-10 sm:py-16">
+    <!-- Cabeçalho do empreendimento -->
+    <section class="hero-gradient text-white py-10 sm:py-14">
       <div class="max-w-6xl mx-auto px-4 sm:px-6">
-        <a href="#home" class="inline-flex items-center gap-1 text-blue-300 hover:text-white text-sm mb-4 transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          Voltar
+        <a href="#home" class="inline-flex items-center gap-1.5 text-blue-300/70 hover:text-white text-xs font-medium mb-5 transition group">
+          <svg class="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Voltar ao catálogo
         </a>
-        <p class="text-blue-200 text-sm font-medium mb-2" id="emp-construtora"></p>
-        <h1 class="font-display text-3xl sm:text-4xl font-bold mb-3" id="emp-nome"></h1>
-        <p class="text-blue-200 flex items-center gap-1 mb-6" id="emp-local">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <p class="text-blue-300/60 text-xs font-semibold tracking-widest uppercase mb-2" id="emp-construtora"></p>
+        <h1 class="font-display text-3xl sm:text-4xl font-bold mb-2 leading-tight" id="emp-nome"></h1>
+        <p class="text-blue-200/60 flex items-center gap-1.5 text-sm mb-8" id="emp-local">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           <span></span>
         </p>
-        <div class="flex flex-wrap gap-4 sm:gap-8">
-          <div><p class="text-xs text-blue-300 uppercase tracking-wider">A partir de</p><p class="text-2xl font-bold" id="emp-valor"></p></div>
-          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Metragem</p><p class="text-lg font-semibold" id="emp-metragem"></p></div>
-          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Tipologia</p><p class="text-lg font-semibold" id="emp-tipologia"></p></div>
-          <div><p class="text-xs text-blue-300 uppercase tracking-wider">Entrega</p><p class="text-lg font-semibold" id="emp-entrega"></p></div>
+        <div class="flex flex-wrap gap-0">
+          <div class="detail-stat"><p class="text-[10px] text-blue-300/50 uppercase tracking-wider font-semibold mb-1">A partir de</p><p class="text-xl sm:text-2xl font-bold" id="emp-valor"></p></div>
+          <div class="detail-stat"><p class="text-[10px] text-blue-300/50 uppercase tracking-wider font-semibold mb-1">Metragem</p><p class="text-base sm:text-lg font-semibold" id="emp-metragem"></p></div>
+          <div class="detail-stat"><p class="text-[10px] text-blue-300/50 uppercase tracking-wider font-semibold mb-1">Tipologia</p><p class="text-base sm:text-lg font-semibold" id="emp-tipologia"></p></div>
+          <div class="detail-stat"><p class="text-[10px] text-blue-300/50 uppercase tracking-wider font-semibold mb-1">Entrega</p><p class="text-base sm:text-lg font-semibold" id="emp-entrega"></p></div>
         </div>
       </div>
     </section>
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12">
-      <section id="fotos-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Galeria de Fotos</h2>
-        <div id="galeria" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
-        <p id="sem-fotos" class="hidden text-gray-400 text-sm py-8 text-center">Fotos em breve</p>
-      </section>
-      <section id="info-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Sobre o Empreendimento</h2>
-        <div id="emp-descricao" class="text-gray-600 leading-relaxed whitespace-pre-line"></div>
-        <div id="emp-obs" class="mt-4 hidden"><span class="inline-block bg-amber-50 text-amber-700 text-sm px-3 py-1 rounded-lg"></span></div>
-      </section>
-      <section id="video-sec" class="hidden">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Vídeo</h2>
-        <div class="aspect-video rounded-xl overflow-hidden bg-gray-100" id="video-container"></div>
-      </section>
-      <section id="book-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Book</h2>
-        <div id="book-list" class="space-y-2"></div>
-        <p id="sem-book" class="hidden text-gray-400 text-sm py-4 text-center">Book em breve</p>
-      </section>
-      <section id="tabela-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Tabela de Preços</h2>
-        <div id="tabela-list" class="space-y-2"></div>
-        <p id="sem-tabela" class="hidden text-gray-400 text-sm py-4 text-center">Tabela em breve</p>
-      </section>
-      <section id="plantas-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Plantas</h2>
-        <div id="plantas-list" class="space-y-2"></div>
-        <p id="sem-plantas" class="hidden text-gray-400 text-sm py-4 text-center">Plantas em breve</p>
-      </section>
-      <section id="mapa-sec">
-        <h2 class="font-display font-bold text-xl text-brand-800 mb-4">Localização</h2>
-        <div id="mapa-container" class="rounded-xl overflow-hidden bg-gray-100 aspect-video"></div>
-        <p id="sem-mapa" class="hidden text-gray-400 text-sm py-4 text-center">Localização em breve</p>
-      </section>
-      <section id="contato-sec" class="bg-brand-800 text-white rounded-2xl p-6 sm:p-10">
-        <h2 class="font-display font-bold text-xl mb-2">Interessado?</h2>
-        <p class="text-blue-200 mb-6 text-sm">Entre em contato com nosso time de especialistas</p>
-        <div class="flex flex-wrap gap-3">
-          <a id="btn-whatsapp" href="#" target="_blank" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Falar com Corretor
-          </a>
-          <button id="btn-compartilhar" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-            Compartilhar
-          </button>
-          <button id="btn-copiar" class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl transition font-medium text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+
+    <!-- Barra fixa de compartilhamento (visível apenas para corretor) -->
+    <div id="share-bar" class="share-bar sticky bottom-0 z-40 border-t border-white/10 py-3 sm:py-3.5">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3">
+        <p class="text-white/60 text-xs hidden sm:block">Envie este empreendimento ao cliente</p>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <button id="btn-copiar" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white px-5 py-2.5 rounded-xl transition text-sm font-medium">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             Copiar Link
           </button>
+          <button id="btn-compartilhar" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-400 text-white px-5 py-2.5 rounded-xl transition text-sm font-medium shadow-lg shadow-blue-500/20">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Compartilhar
+          </button>
         </div>
+      </div>
+    </div>
+
+    <!-- Conteúdo detalhado -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10 pb-24">
+      <section id="fotos-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Galeria de Fotos
+        </h2>
+        <div id="galeria" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+        <p id="sem-fotos" class="hidden text-gray-300 text-sm py-10 text-center">Fotos em breve</p>
+      </section>
+
+      <section id="info-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Sobre o Empreendimento
+        </h2>
+        <div id="emp-descricao" class="text-gray-600 leading-relaxed whitespace-pre-line text-sm"></div>
+        <div id="emp-obs" class="mt-4 hidden"><span class="inline-block bg-amber-50 text-amber-700 text-sm px-4 py-2 rounded-xl"></span></div>
+      </section>
+
+      <section id="video-sec" class="hidden">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Vídeo
+        </h2>
+        <div class="aspect-video rounded-xl overflow-hidden bg-gray-100 shadow-sm" id="video-container"></div>
+      </section>
+
+      <section id="book-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Book
+        </h2>
+        <div id="book-list" class="space-y-2"></div>
+        <p id="sem-book" class="hidden text-gray-300 text-sm py-6 text-center">Book em breve</p>
+      </section>
+
+      <section id="tabela-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Tabela de Preços
+        </h2>
+        <div id="tabela-list" class="space-y-2"></div>
+        <p id="sem-tabela" class="hidden text-gray-300 text-sm py-6 text-center">Tabela em breve</p>
+      </section>
+
+      <section id="plantas-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Plantas
+        </h2>
+        <div id="plantas-list" class="space-y-2"></div>
+        <p id="sem-plantas" class="hidden text-gray-300 text-sm py-6 text-center">Plantas em breve</p>
+      </section>
+
+      <section id="mapa-sec">
+        <h2 class="font-semibold text-brand-800 text-base mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-brand-500 rounded-full"></span>
+          Localização
+        </h2>
+        <div id="mapa-container" class="rounded-xl overflow-hidden bg-gray-100 aspect-video shadow-sm"></div>
+        <p id="sem-mapa" class="hidden text-gray-300 text-sm py-6 text-center">Localização em breve</p>
       </section>
     </div>
   </div>
@@ -197,25 +260,25 @@
 
 <!-- ═══════════ VIEW: LOGIN ═══════════ -->
 <div id="view-login" class="view-section">
-  <div class="min-h-screen bg-brand-900 flex items-center justify-center p-4">
+  <div class="min-h-screen hero-gradient flex items-center justify-center p-4">
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
-        <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><span class="text-white font-bold text-xl">LP</span></div>
+        <div class="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20"><span class="text-white font-bold text-xl">LP</span></div>
         <h1 class="font-display font-bold text-2xl text-white mb-1">Lopes Prime</h1>
-        <p class="text-blue-300 text-sm">Área Administrativa</p>
+        <p class="text-blue-300/60 text-sm">Área Administrativa</p>
       </div>
       <div class="bg-white rounded-2xl p-6 shadow-2xl">
         <div id="login-error" class="hidden mb-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl"></div>
         <div class="space-y-4">
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label><input id="login-email" type="email" placeholder="admin@lopesprime.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Senha</label><input id="login-senha" type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
-          <button id="btn-login" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2">
+          <div><label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">E-mail</label><input id="login-email" type="email" placeholder="admin@lopesprime.com" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wider">Senha</label><input id="login-senha" type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm"></div>
+          <button id="btn-login" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
             <span>Entrar</span>
             <svg id="login-spinner" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
           </button>
         </div>
       </div>
-      <a href="#home" class="block text-center mt-6 text-blue-300 hover:text-white text-sm transition">← Voltar ao Portal</a>
+      <a href="#home" class="block text-center mt-6 text-blue-300/50 hover:text-white text-xs transition">← Voltar ao Portal</a>
     </div>
   </div>
 </div>
@@ -225,9 +288,9 @@
   <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
   <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-100 z-50 transform -translate-x-full lg:translate-x-0 transition-transform">
     <div class="p-5 border-b border-gray-100">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">LP</span></div>
-        <div><span class="font-display font-bold text-brand-800 text-base">Lopes Prime</span><p class="text-xs text-gray-400">Administração</p></div>
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 bg-brand-600 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-sm">LP</span></div>
+        <div><span class="font-display font-bold text-brand-800 text-sm">Lopes Prime</span><p class="text-[10px] text-gray-400 font-medium tracking-wider uppercase">Administração</p></div>
       </div>
     </div>
     <nav class="p-3 space-y-1">
@@ -274,7 +337,7 @@
           <div class="bg-white rounded-2xl p-6 border border-gray-100"><p class="text-sm text-gray-500 mb-1">Empreendimentos Ativos</p><p id="dash-count" class="text-3xl font-bold text-brand-800">-</p></div>
           <div class="bg-white rounded-2xl p-6 border border-gray-100 flex items-center justify-center"><button onclick="showAdminView('novo')" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition">+ Cadastrar Novo</button></div>
         </div>
-        <h2 class="font-semibold text-gray-700 mb-3">Últimos cadastrados</h2>
+        <h2 class="font-semibold text-gray-700 mb-3 text-sm">Últimos cadastrados</h2>
         <div id="dash-recentes" class="space-y-2"></div>
       </div>
       <div id="adm-empreendimentos" class="hidden fade-in">
@@ -290,28 +353,43 @@
         <div class="bg-white rounded-2xl p-6 border border-gray-100 space-y-4">
           <input type="hidden" id="f-id">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label><input id="f-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Construtora</label><input id="f-construtora" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Cidade *</label><input id="f-cidade" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Bairro</label><input id="f-bairro" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Metragem</label><input id="f-metragem" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 60 a 85 m²"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tipologia</label><input id="f-tipologia" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 2 e 3 Dorms / 1 Suíte"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Entrega</label><input id="f-entrega" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: Mar/2027 ou Pronto"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Valor Inicial (R$)</label><input id="f-valor" type="number" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 450000"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Nome *</label><input id="f-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Construtora</label><input id="f-construtora" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Cidade *</label><input id="f-cidade" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Bairro</label><input id="f-bairro" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Metragem</label><input id="f-metragem" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 60 a 85 m²"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Tipologia</label><input id="f-tipologia" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 2 e 3 Dorms / 1 Suíte"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Entrega</label><input id="f-entrega" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: Mar/2027 ou Pronto"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Valor Inicial (R$)</label><input id="f-valor" type="number" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Ex: 450000"></div>
           </div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label><textarea id="f-descricao" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none"></textarea></div>
+          <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Descrição</label><textarea id="f-descricao" rows="3" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm resize-none"></textarea></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Google Maps (embed URL)</label><input id="f-gmaps" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Cole o link do embed"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label><input id="f-whatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="5511999999999"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Vídeo YouTube (URL)</label><input id="f-video" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="https://youtube.com/watch?v=..."></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Google Maps (embed URL)</label><input id="f-gmaps" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="Cole o link do embed"></div>
+            <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Vídeo YouTube (URL)</label><input id="f-video" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="https://youtube.com/watch?v=..."></div>
           </div>
-          <div id="uploads-section" class="hidden border-t border-gray-100 pt-4 space-y-4">
-            <h3 class="font-semibold text-gray-700">Arquivos</h3>
+          <div id="uploads-section" class="border-t border-gray-100 pt-5 space-y-4">
+            <h3 class="font-semibold text-gray-700 text-sm">Arquivos do Empreendimento</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label class="block text-sm font-medium text-gray-700 mb-1">Fotos</label><input type="file" id="f-fotos" multiple accept="image/*" class="text-sm"><div id="fotos-existentes" class="mt-2 flex flex-wrap gap-2"></div></div>
-              <div><label class="block text-sm font-medium text-gray-700 mb-1">Book (PDF)</label><input type="file" id="f-book" accept=".pdf" class="text-sm"><div id="book-existentes" class="mt-2 space-y-1"></div></div>
-              <div><label class="block text-sm font-medium text-gray-700 mb-1">Tabela (PDF)</label><input type="file" id="f-tabela" accept=".pdf" class="text-sm"><div id="tabela-existentes" class="mt-2 space-y-1"></div></div>
-              <div><label class="block text-sm font-medium text-gray-700 mb-1">Plantas (PDF)</label><input type="file" id="f-plantas" accept=".pdf" class="text-sm"><div id="plantas-existentes" class="mt-2 space-y-1"></div></div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-dashed border-gray-200">
+                <label class="block text-xs font-medium text-brand-600 mb-2 uppercase tracking-wider">📸 Fotos (múltiplas)</label>
+                <input type="file" id="f-fotos" multiple accept="image/*" class="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 file:cursor-pointer cursor-pointer">
+                <div id="fotos-existentes" class="mt-3 flex flex-wrap gap-2"></div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-dashed border-gray-200">
+                <label class="block text-xs font-medium text-brand-600 mb-2 uppercase tracking-wider">📄 Book (PDF)</label>
+                <input type="file" id="f-book" accept=".pdf" class="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 file:cursor-pointer cursor-pointer">
+                <div id="book-existentes" class="mt-3 space-y-1"></div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-dashed border-gray-200">
+                <label class="block text-xs font-medium text-brand-600 mb-2 uppercase tracking-wider">📑 Tabela de Preços (PDF)</label>
+                <input type="file" id="f-tabela" accept=".pdf" class="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 file:cursor-pointer cursor-pointer">
+                <div id="tabela-existentes" class="mt-3 space-y-1"></div>
+              </div>
+              <div class="bg-gray-50 rounded-xl p-4 border border-dashed border-gray-200">
+                <label class="block text-xs font-medium text-brand-600 mb-2 uppercase tracking-wider">📐 Plantas (PDF)</label>
+                <input type="file" id="f-plantas" accept=".pdf" class="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-brand-50 file:text-brand-600 hover:file:bg-brand-100 file:cursor-pointer cursor-pointer">
+                <div id="plantas-existentes" class="mt-3 space-y-1"></div>
+              </div>
             </div>
           </div>
           <div class="flex gap-3 pt-2">
@@ -324,10 +402,9 @@
         <h1 class="font-display font-bold text-2xl text-brand-800 mb-6">Configurações</h1>
         <div class="bg-white rounded-2xl p-6 border border-gray-100 space-y-4 max-w-lg">
           <input type="hidden" id="cfg-id">
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome da Empresa</label><input id="cfg-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Telefone</label><input id="cfg-telefone" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label><input id="cfg-whatsapp" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm" placeholder="5511999999999"></div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Logo</label><input type="file" id="cfg-logo" accept="image/*" class="text-sm"><img id="cfg-logo-preview" src="" class="hidden mt-2 h-16 rounded-lg"></div>
+          <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Nome da Empresa</label><input id="cfg-nome" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Telefone</label><input id="cfg-telefone" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"></div>
+          <div><label class="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">Logo</label><input type="file" id="cfg-logo" accept="image/*" class="text-sm"><img id="cfg-logo-preview" src="" class="hidden mt-2 h-16 rounded-lg"></div>
           <button onclick="salvarConfig()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition">Salvar</button>
         </div>
       </div>
@@ -336,31 +413,76 @@
 </div>
 
 <!-- ═══════════ FOOTER PÚBLICO ═══════════ -->
-<footer id="footer-public" class="bg-brand-900 text-white/60 py-10 mt-8">
+<footer id="footer-public" class="bg-brand-900 text-white/40 py-8">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-    <div class="flex items-center justify-center gap-2 mb-3">
-      <div class="w-6 h-6 bg-brand-600 rounded flex items-center justify-center"><span class="text-white text-xs font-bold">LP</span></div>
-      <span class="font-display font-semibold text-white text-sm">Lopes Prime</span>
+    <div class="flex items-center justify-center gap-2 mb-2">
+      <div class="w-5 h-5 bg-brand-600 rounded flex items-center justify-center"><span class="text-white text-[9px] font-bold">LP</span></div>
+      <span class="font-display font-semibold text-white/70 text-xs">Lopes Prime</span>
     </div>
-    <p class="text-xs">Portal de Empreendimentos — Grande ABC</p>
+    <p class="text-[10px] tracking-wider uppercase">Portal de Empreendimentos — Grande ABC</p>
   </div>
 </footer>
 
-<!-- WhatsApp FAB -->
-<a id="fab-whatsapp" href="#" target="_blank" class="fixed bottom-6 right-6 z-50 bg-emerald-500 hover:bg-emerald-600 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-110">
-  <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-</a>
+<!-- ═══════════ ASSISTENTE IA LOCAL (PREDINHO) ═══════════ -->
+<div id="ia-btn" onclick="toggleIA()" class="fixed bottom-5 right-5 z-[9990] cursor-pointer group" title="Assistente LP">
+  <div class="relative">
+    <svg class="w-14 h-14 drop-shadow-lg group-hover:scale-110 transition-transform duration-200" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="18" width="40" height="32" rx="3" fill="#1e40af"/>
+      <rect x="12" y="6" width="32" height="14" rx="2" fill="#3b82f6"/>
+      <rect x="20" y="2" width="16" height="6" rx="1" fill="#60a5fa"/>
+      <rect x="14" y="24" width="6" height="6" rx="1" fill="#93c5fd" opacity=".9"/>
+      <rect x="25" y="24" width="6" height="6" rx="1" fill="#93c5fd" opacity=".9"/>
+      <rect x="36" y="24" width="6" height="6" rx="1" fill="#93c5fd" opacity=".9"/>
+      <rect x="14" y="34" width="6" height="6" rx="1" fill="#60a5fa" opacity=".7"/>
+      <rect x="25" y="34" width="6" height="6" rx="1" fill="#60a5fa" opacity=".7"/>
+      <rect x="36" y="34" width="6" height="6" rx="1" fill="#60a5fa" opacity=".7"/>
+      <rect x="22" y="42" width="12" height="8" rx="1" fill="#0f2240"/>
+      <rect x="16" y="10" width="4" height="4" rx="0.5" fill="#dbeafe" opacity=".6"/>
+      <rect x="24" y="10" width="4" height="4" rx="0.5" fill="#dbeafe" opacity=".6"/>
+      <rect x="32" y="10" width="4" height="4" rx="0.5" fill="#dbeafe" opacity=".6"/>
+    </svg>
+    <span id="ia-pulse" class="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white shadow animate-pulse"></span>
+  </div>
+</div>
+
+<div id="ia-panel" class="fixed bottom-24 right-5 z-[9990] w-[340px] sm:w-[380px] max-h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex-col overflow-hidden hidden" style="display:none">
+  <div class="hero-gradient px-4 py-3 flex items-center gap-3 shrink-0">
+    <svg class="w-8 h-8 shrink-0" viewBox="0 0 56 56" fill="none"><rect x="8" y="18" width="40" height="32" rx="3" fill="#fff" opacity=".2"/><rect x="12" y="6" width="32" height="14" rx="2" fill="#fff" opacity=".15"/><rect x="20" y="2" width="16" height="6" rx="1" fill="#fff" opacity=".1"/><rect x="14" y="24" width="6" height="6" rx="1" fill="#fff" opacity=".5"/><rect x="25" y="24" width="6" height="6" rx="1" fill="#fff" opacity=".5"/><rect x="36" y="24" width="6" height="6" rx="1" fill="#fff" opacity=".5"/><rect x="22" y="42" width="12" height="8" rx="1" fill="#fff" opacity=".3"/></svg>
+    <div class="flex-1 min-w-0">
+      <p class="text-white font-semibold text-sm leading-tight">Assistente LP</p>
+      <p class="text-blue-200/60 text-[10px]">Pesquisa inteligente no catálogo</p>
+    </div>
+    <button onclick="toggleIA()" class="text-white/50 hover:text-white transition p-1">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+    </button>
+  </div>
+  <div id="ia-msgs" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" style="max-height:360px"></div>
+  <div class="px-3 py-2.5 border-t border-gray-100 bg-gray-50/80 shrink-0">
+    <div class="flex gap-2">
+      <input id="ia-input" type="text" placeholder="Pergunte sobre os empreendimentos..." class="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:bg-white" onkeypress="if(event.key==='Enter')enviarIA()">
+      <button onclick="enviarIA()" class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2.5 rounded-xl transition shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+      </button>
+    </div>
+    <div id="ia-sugestoes" class="flex flex-wrap gap-1.5 mt-2">
+      <button onclick="sugestaoIA(this)" class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 text-brand-600 hover:bg-blue-100 transition">Mais baratos</button>
+      <button onclick="sugestaoIA(this)" class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 text-brand-600 hover:bg-blue-100 transition">Prontos p/ morar</button>
+      <button onclick="sugestaoIA(this)" class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 text-brand-600 hover:bg-blue-100 transition">Quais cidades?</button>
+      <button onclick="sugestaoIA(this)" class="text-[10px] px-2.5 py-1 rounded-lg bg-blue-50 text-brand-600 hover:bg-blue-100 transition">Resumo geral</button>
+    </div>
+  </div>
+</div>
 
 <!-- LIGHTBOX -->
 <div id="lightbox" class="fixed inset-0 bg-black/90 z-[9999] hidden items-center justify-center p-4">
-  <button id="lb-close" class="absolute top-4 right-4 text-white/70 hover:text-white text-3xl">&times;</button>
-  <button id="lb-prev" class="absolute left-4 text-white/70 hover:text-white text-4xl">&lsaquo;</button>
-  <button id="lb-next" class="absolute right-4 text-white/70 hover:text-white text-4xl">&rsaquo;</button>
+  <button id="lb-close" class="absolute top-4 right-4 text-white/60 hover:text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-xl">&times;</button>
+  <button id="lb-prev" class="absolute left-3 sm:left-6 text-white/60 hover:text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-2xl">&lsaquo;</button>
+  <button id="lb-next" class="absolute right-3 sm:right-6 text-white/60 hover:text-white w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition text-2xl">&rsaquo;</button>
   <img id="lb-img" class="max-w-full max-h-[85vh] rounded-xl object-contain" src="" alt="">
 </div>
 
 <!-- TOAST -->
-<div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2"></div>
+<div id="toast-container" class="fixed top-20 right-4 z-[9999] flex flex-col gap-2"></div>
 
 <!-- ═══════════ JAVASCRIPT UNIFICADO ═══════════ -->
 <script>
@@ -373,8 +495,7 @@
   if (typeof supabase === 'undefined') {
     document.body.innerHTML = '<div style="max-width:520px;margin:80px auto;padding:24px;font-family:sans-serif;text-align:center">'
       + '<h2 style="color:#b91c1c;margin-bottom:12px">Não foi possível carregar o Supabase</h2>'
-      + '<p style="color:#374151;line-height:1.5">A biblioteca do Supabase não carregou (sem internet, CDN bloqueado, ou arquivo aberto direto pelo Explorer). '
-      + 'Verifique sua conexão e recarregue a página. Se estiver abrindo o arquivo com duplo clique (file://), rode por um servidor local (Live Server / <code>python -m http.server</code>) e tente novamente.</p>'
+      + '<p style="color:#374151;line-height:1.5">A biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.</p>'
       + '<button onclick="location.reload()" style="margin-top:16px;padding:10px 20px;background:#1e40af;color:#fff;border:none;border-radius:8px;cursor:pointer">Recarregar</button>'
       + '</div>';
     return;
@@ -390,17 +511,14 @@
   function gerarSlug(t) {
     return t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
   }
-  function gerarMsgCompartilhamento(nome) {
-    return encodeURIComponent('Olá!\n\nSegue todas as informações do empreendimento *' + nome + '*.\n\nNo link você encontrará:\n📸 Fotos\n📄 Book\n📑 Tabela\n📐 Plantas\n💰 Valores\n📍 Localização\n\nQualquer dúvida estou à disposição.');
-  }
   function mostrarToast(msg, tipo) {
     tipo = tipo || 'success';
     var c = document.getElementById('toast-container');
     var cores = {success:'bg-emerald-500',error:'bg-red-500',info:'bg-blue-500',warning:'bg-amber-500'};
     var icons = {success:'✓',error:'✕',info:'ℹ',warning:'⚠'};
     var t = document.createElement('div');
-    t.className = cores[tipo] + ' text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-x-full opacity-0 transition-all duration-300 text-sm';
-    t.innerHTML = '<span class="text-lg">' + icons[tipo] + '</span><span>' + msg + '</span>';
+    t.className = cores[tipo] + ' text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 transform translate-x-full opacity-0 transition-all duration-300 text-sm max-w-xs';
+    t.innerHTML = '<span class="text-base">' + icons[tipo] + '</span><span>' + msg + '</span>';
     c.appendChild(t);
     requestAnimationFrame(function() { t.classList.remove('translate-x-full','opacity-0'); });
     setTimeout(function() { t.classList.add('translate-x-full','opacity-0'); setTimeout(function() { t.remove(); }, 300); }, 3000);
@@ -409,13 +527,18 @@
     return new Promise(function(resolve) {
       var o = document.createElement('div');
       o.className = 'fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4';
-      o.innerHTML = '<div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"><p class="text-gray-800 text-base mb-6">' + msg + '</p><div class="flex gap-3 justify-end"><button id="confirm-cancel" class="px-5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 transition text-sm font-medium">Cancelar</button><button id="confirm-ok" class="px-5 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition text-sm font-medium">Confirmar</button></div></div>';
+      o.innerHTML = '<div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"><p class="text-gray-800 text-sm mb-6 leading-relaxed">' + msg + '</p><div class="flex gap-3 justify-end"><button id="confirm-cancel" class="px-5 py-2 rounded-xl text-gray-600 hover:bg-gray-100 transition text-sm font-medium">Cancelar</button><button id="confirm-ok" class="px-5 py-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition text-sm font-medium">Confirmar</button></div></div>';
       document.body.appendChild(o);
       o.querySelector('#confirm-cancel').onclick = function() { o.remove(); resolve(false); };
       o.querySelector('#confirm-ok').onclick = function() { o.remove(); resolve(true); };
     });
   }
   function extractYouTubeId(url) { var m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s?]+)/); return m ? m[1] : null; }
+  function errMsg(err) {
+    if (!err) return 'Erro desconhecido';
+    if (typeof err === 'string') return err;
+    return err.message || err.msg || err.error_description || err.details || JSON.stringify(err);
+  }
   window.scrollToSec = function(id) { var el = document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); };
 
   // ── Estado ──
@@ -440,15 +563,13 @@
 
     var headerPublic = document.getElementById('header-public');
     var footerPublic = document.getElementById('footer-public');
-    var fabWpp = document.getElementById('fab-whatsapp');
 
     headerPublic.style.display = '';
     footerPublic.style.display = '';
-    fabWpp.style.display = '';
 
     if (view === 'home') {
       document.getElementById('view-home').classList.add('active');
-      document.title = 'Lopes Prime — Portal de Empreendimentos';
+      document.title = 'Lopes Prime — Portal do Corretor';
       loadHome();
     } else if (view === 'empreendimento' && slug) {
       document.getElementById('view-empreendimento').classList.add('active');
@@ -456,14 +577,12 @@
     } else if (view === 'login') {
       headerPublic.style.display = 'none';
       footerPublic.style.display = 'none';
-      fabWpp.style.display = 'none';
       document.getElementById('view-login').classList.add('active');
       document.title = 'Login — Lopes Prime';
       checkIfAlreadyLogged();
     } else if (view === 'admin') {
       headerPublic.style.display = 'none';
       footerPublic.style.display = 'none';
-      fabWpp.style.display = 'none';
       document.getElementById('view-admin').classList.add('active');
       document.title = 'Admin — Lopes Prime';
       await checkAuth();
@@ -481,15 +600,15 @@
   async function loadHome() {
     if (homeLoaded) { renderGrid(todosEmpreendimentos); return; }
     try {
-      var configRes = await sb.from('configuracoes').select('*').limit(1).maybeSingle();
-      var config = configRes.data;
-      if (config && config.whatsapp) document.getElementById('fab-whatsapp').href = 'https://wa.me/' + config.whatsapp;
-
       var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
+      // Fallback: se a coluna 'ativo' não existir, busca sem filtro
+      if (res.error && res.error.code === '42703') {
+        console.warn('Coluna "ativo" não encontrada, buscando todos.');
+        res = await sb.from('empreendimentos').select('*').order('nome');
+      }
       if (res.error) throw res.error;
       todosEmpreendimentos = res.data || [];
 
-      // Limpa selects antes de popular (fix duplicação)
       var fc = document.getElementById('filtro-cidade');
       var fco = document.getElementById('filtro-construtora');
       fc.innerHTML = '<option value="">Todas as cidades</option>';
@@ -507,9 +626,10 @@
       renderGrid(todosEmpreendimentos);
       homeLoaded = true;
     } catch(err) {
-      console.error('loadHome error:', err);
+      console.error('loadHome error:', errMsg(err), err);
       document.getElementById('loading-grid').classList.add('hidden');
       document.getElementById('empty-state').classList.remove('hidden');
+      document.getElementById('empty-state').querySelector('p').textContent = 'Erro ao carregar: ' + errMsg(err);
     }
   }
 
@@ -540,26 +660,31 @@
       var imgUrl = emp.imagem_principal || 'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome);
       var card = document.createElement('a');
       card.href = '#empreendimento/' + emp.slug;
-      card.className = 'card-hover bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 fade-in block';
-      card.style.animationDelay = (i*0.05) + 's';
+      card.className = 'card-hover bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100/80 fade-in block';
+      card.style.animationDelay = (i*0.04) + 's';
+      var statusBadge = '';
+      if (emp.entrega === 'Pronto') {
+        statusBadge = '<span class="badge-status bg-emerald-500/90 text-white absolute top-3 left-3 backdrop-blur-sm">Pronto</span>';
+      }
       card.innerHTML =
         '<div class="aspect-[16/10] overflow-hidden bg-gray-100 relative">' +
-          '<img src="' + imgUrl + '" alt="' + emp.nome + '" class="w-full h-full object-cover" loading="lazy" onerror="this.src=\'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome) + '\'">' +
-          (emp.entrega==='Pronto'?'<span class="absolute top-3 left-3 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full">Pronto</span>':'') +
+          '<img src="' + imgUrl + '" alt="' + emp.nome + '" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onerror="this.src=\'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome) + '\'">' +
+          statusBadge +
         '</div>' +
-        '<div class="p-5">' +
-          '<h3 class="font-semibold text-brand-800 text-base leading-snug mb-2">' + emp.nome + '</h3>' +
-          '<p class="text-gray-500 text-sm mb-3 flex items-center gap-1">' +
-            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' +
+        '<div class="p-4 sm:p-5">' +
+          (emp.construtora ? '<p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">' + emp.construtora + '</p>' : '') +
+          '<h3 class="font-semibold text-brand-800 text-[15px] leading-snug mb-2">' + emp.nome + '</h3>' +
+          '<p class="text-gray-400 text-xs mb-3 flex items-center gap-1">' +
+            '<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' +
             emp.cidade + (emp.bairro?' · '+emp.bairro:'') +
           '</p>' +
-          '<div class="flex flex-wrap gap-2 mb-4">' +
-            (emp.metragem?'<span class="text-xs bg-blue-50 text-brand-600 px-2 py-1 rounded-lg">'+emp.metragem+'</span>':'') +
-            (emp.tipologia?'<span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">'+emp.tipologia+'</span>':'') +
+          '<div class="flex flex-wrap gap-1.5 mb-4">' +
+            (emp.metragem?'<span class="tag-chip bg-blue-50 text-brand-600">'+emp.metragem+'</span>':'') +
+            (emp.tipologia?'<span class="tag-chip bg-gray-50 text-gray-500">'+emp.tipologia+'</span>':'') +
           '</div>' +
           '<div class="flex items-center justify-between pt-3 border-t border-gray-100">' +
-            '<div><p class="text-xs text-gray-400">A partir de</p><p class="text-brand-600 font-bold text-base">' + formatarMoeda(emp.valor_inicial) + '</p></div>' +
-            (emp.entrega&&emp.entrega!=='Pronto'?'<div class="text-right"><p class="text-xs text-gray-400">Entrega</p><p class="text-sm font-medium text-gray-700">'+emp.entrega+'</p></div>':'') +
+            '<div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">A partir de</p><p class="text-brand-600 font-bold text-sm">' + formatarMoeda(emp.valor_inicial) + '</p></div>' +
+            (emp.entrega&&emp.entrega!=='Pronto'?'<div class="text-right"><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Entrega</p><p class="text-xs font-semibold text-gray-600">'+emp.entrega+'</p></div>':'') +
           '</div>' +
         '</div>';
       grid.appendChild(card);
@@ -599,10 +724,6 @@
       if (emp.observacoes) { obsEl.classList.remove('hidden'); obsEl.querySelector('span').textContent = emp.observacoes; }
       else obsEl.classList.add('hidden');
 
-      var configRes = await sb.from('configuracoes').select('*').limit(1).maybeSingle();
-      var config = configRes.data;
-      var wpp = emp.whatsapp || (config ? config.whatsapp : '') || '';
-
       currentEmpFotos = (emp.arquivos||[]).filter(function(a){return a.tipo==='foto'});
       var books = (emp.arquivos||[]).filter(function(a){return a.tipo==='book'});
       var tabelas = (emp.arquivos||[]).filter(function(a){return a.tipo==='tabela'});
@@ -616,9 +737,9 @@
         currentEmpFotos.forEach(function(f,i) { galeriaEl.innerHTML += '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="'+i+'"><img src="'+f.url+'" alt="" class="w-full h-full object-cover" loading="lazy"></div>'; });
       } else { semFotos.classList.remove('hidden'); }
 
-      renderPdfs('book-list','sem-book',books,'📄 Book');
-      renderPdfs('tabela-list','sem-tabela',tabelas,'📑 Tabela');
-      renderPdfs('plantas-list','sem-plantas',plantas,'📐 Planta');
+      renderPdfs('book-list','sem-book',books,'Book');
+      renderPdfs('tabela-list','sem-tabela',tabelas,'Tabela');
+      renderPdfs('plantas-list','sem-plantas',plantas,'Planta');
 
       var videoSec = document.getElementById('video-sec');
       if (emp.video_url) {
@@ -635,17 +756,26 @@
         if (src) mapaC.innerHTML = '<iframe src="'+src+'" class="w-full h-full border-0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
       } else { semMapa.classList.remove('hidden'); mapaC.classList.add('hidden'); }
 
+      // Compartilhamento — usa API nativa ou copia o link
       var pageUrl = location.href;
-      document.getElementById('btn-whatsapp').href = 'https://wa.me/' + wpp + '?text=' + gerarMsgCompartilhamento(emp.nome) + '%0A%0A' + encodeURIComponent(pageUrl);
       document.getElementById('btn-compartilhar').onclick = function() {
-        var msg = 'Olá!\n\nSegue todas as informações do empreendimento ' + emp.nome + '.\n\n' + pageUrl;
-        if (navigator.share) navigator.share({title:emp.nome,text:msg,url:pageUrl}); else window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+        var texto = 'Confira o empreendimento ' + emp.nome + ':\n' + pageUrl;
+        if (navigator.share) {
+          navigator.share({title:emp.nome, text:texto, url:pageUrl}).catch(function(){});
+        } else {
+          navigator.clipboard.writeText(pageUrl).then(function() {
+            mostrarToast('Link copiado!','success');
+          });
+        }
       };
-      document.getElementById('btn-copiar').onclick = async function() { await navigator.clipboard.writeText(pageUrl); mostrarToast('Link copiado!','success'); };
+      document.getElementById('btn-copiar').onclick = async function() {
+        await navigator.clipboard.writeText(pageUrl);
+        mostrarToast('Link copiado!','success');
+      };
 
       loading.classList.add('hidden');
       conteudo.classList.remove('hidden');
-    } catch(err) { console.error('loadEmpreendimento error:', err); location.hash='#home'; }
+    } catch(err) { console.error('loadEmpreendimento error:', errMsg(err), err); mostrarToast('Erro ao carregar empreendimento: ' + errMsg(err),'error'); location.hash='#home'; }
   }
 
   function renderPdfs(containerId, emptyId, files, label) {
@@ -653,7 +783,15 @@
     c.innerHTML = '';
     if (files.length) {
       document.getElementById(emptyId).classList.add('hidden');
-      files.forEach(function(f) { c.innerHTML += '<a href="'+f.url+'" target="_blank" class="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:border-brand-200 hover:shadow-sm transition"><div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-500 shrink-0"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg></div><div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-800 truncate">'+(f.nome||label)+'</p><p class="text-xs text-gray-400">PDF</p></div><svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></a>'; });
+      files.forEach(function(f) {
+        c.innerHTML += '<a href="'+f.url+'" target="_blank" class="pdf-card flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 transition">'
+          + '<div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-400 shrink-0">'
+          + '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>'
+          + '</div>'
+          + '<div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-700 truncate">'+(f.nome||label)+'</p><p class="text-[11px] text-gray-400">PDF — Clique para abrir</p></div>'
+          + '<svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>'
+          + '</a>';
+      });
     } else {
       document.getElementById(emptyId).classList.remove('hidden');
     }
@@ -687,7 +825,7 @@
     try {
       var res = await sb.auth.getSession();
       if (res.data.session) location.hash = '#admin';
-    } catch(err) { console.error('Erro ao verificar sessão:', err); }
+    } catch(err) { console.error('Erro ao verificar sessão:', errMsg(err)); }
   }
 
   document.getElementById('btn-login').addEventListener('click', async function() {
@@ -718,8 +856,8 @@
       if (!res.data.session) { location.hash='#login'; return; }
       loadDashboard();
     } catch(err) {
-      console.error('Erro ao verificar autenticação:', err);
-      mostrarToast('Erro ao verificar login. Tente novamente.','error');
+      console.error('Erro ao verificar autenticação:', errMsg(err));
+      mostrarToast('Erro ao verificar login: ' + errMsg(err),'error');
       location.hash = '#login';
     }
   }
@@ -742,21 +880,39 @@
   };
 
   async function loadDashboard() {
-    var countRes = await sb.from('empreendimentos').select('*',{count:'exact',head:true}).eq('ativo',true);
-    document.getElementById('dash-count').textContent = countRes.count||0;
-    var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('created_at',{ascending:false}).limit(5);
-    document.getElementById('dash-recentes').innerHTML = (res.data||[]).map(function(e) { return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'')+'</p></div><span class="text-sm font-medium text-brand-600">'+formatarMoeda(e.valor_inicial)+'</span></div>'; }).join('');
+    try {
+      var countRes = await sb.from('empreendimentos').select('*',{count:'exact',head:true}).eq('ativo',true);
+      if (countRes.error && countRes.error.code === '42703') {
+        countRes = await sb.from('empreendimentos').select('*',{count:'exact',head:true});
+      }
+      document.getElementById('dash-count').textContent = countRes.count||0;
+      var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('created_at',{ascending:false}).limit(5);
+      if (res.error && res.error.code === '42703') {
+        res = await sb.from('empreendimentos').select('*').order('created_at',{ascending:false}).limit(5);
+      }
+      document.getElementById('dash-recentes').innerHTML = (res.data||[]).map(function(e) { return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'')+'</p></div><span class="text-sm font-medium text-brand-600">'+formatarMoeda(e.valor_inicial)+'</span></div>'; }).join('');
+    } catch(err) {
+      console.error('loadDashboard error:', errMsg(err), err);
+    }
   }
 
   async function loadAdminEmpreendimentos() {
-    var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
-    todosEmpsAdmin = res.data||[];
-    renderAdminLista(todosEmpsAdmin);
+    try {
+      var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
+      if (res.error && res.error.code === '42703') {
+        res = await sb.from('empreendimentos').select('*').order('nome');
+      }
+      if (res.error) { console.error('loadAdminEmpreendimentos error:', errMsg(res.error)); }
+      todosEmpsAdmin = res.data||[];
+      renderAdminLista(todosEmpsAdmin);
+    } catch(err) {
+      console.error('loadAdminEmpreendimentos error:', errMsg(err), err);
+    }
   }
 
   function renderAdminLista(lista) {
     document.getElementById('admin-lista').innerHTML = lista.map(function(e) {
-      return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-medium text-sm text-gray-800 truncate">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'-')+' · '+formatarMoeda(e.valor_inicial)+'</p></div><div class="flex gap-2 shrink-0"><button onclick="editarEmp(\''+e.id+'\')" class="text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="excluirEmp(\''+e.id+'\',\''+e.nome.replace(/'/g,"\\'")+'\')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>';
+      return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-medium text-sm text-gray-800 truncate">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'-')+' · '+formatarMoeda(e.valor_inicial)+'</p></div><div class="flex gap-1 shrink-0"><button onclick="editarEmp(\''+e.id+'\')" class="text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="excluirEmp(\''+e.id+'\',\''+e.nome.replace(/'/g,"\\'")+'\')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>';
     }).join('');
   }
 
@@ -768,9 +924,10 @@
   function resetForm() {
     document.getElementById('form-title').textContent = 'Novo Empreendimento';
     document.getElementById('f-id').value = '';
-    ['f-nome','f-construtora','f-cidade','f-bairro','f-metragem','f-tipologia','f-entrega','f-valor','f-descricao','f-gmaps','f-whatsapp','f-video'].forEach(function(id) { document.getElementById(id).value=''; });
-    document.getElementById('uploads-section').classList.add('hidden');
+    ['f-nome','f-construtora','f-cidade','f-bairro','f-metragem','f-tipologia','f-entrega','f-valor','f-descricao','f-gmaps','f-video'].forEach(function(id) { document.getElementById(id).value=''; });
+    document.getElementById('uploads-section').classList.remove('hidden');
     ['fotos-existentes','book-existentes','tabela-existentes','plantas-existentes'].forEach(function(id) { document.getElementById(id).innerHTML=''; });
+    ['f-fotos','f-book','f-tabela','f-plantas'].forEach(function(id) { document.getElementById(id).value=''; });
   }
 
   window.editarEmp = async function(id) {
@@ -790,7 +947,6 @@
     document.getElementById('f-valor').value = emp.valor_inicial||'';
     document.getElementById('f-descricao').value = emp.descricao||'';
     document.getElementById('f-gmaps').value = emp.google_maps||'';
-    document.getElementById('f-whatsapp').value = emp.whatsapp||'';
     document.getElementById('f-video').value = emp.video_url||'';
     document.getElementById('uploads-section').classList.remove('hidden');
 
@@ -810,6 +966,14 @@
     var nome = document.getElementById('f-nome').value.trim();
     var cidade = document.getElementById('f-cidade').value.trim();
     if (!nome||!cidade) { mostrarToast('Nome e Cidade são obrigatórios.','error'); return; }
+
+    // Desabilita botão e mostra progresso
+    var btnSalvar = document.querySelector('#adm-novo button[onclick="salvarEmpreendimento()"]');
+    var btnTextoOriginal = btnSalvar.textContent;
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando...';
+    btnSalvar.classList.add('opacity-60');
+
     var dados = {
       nome: nome, cidade: cidade,
       construtora: document.getElementById('f-construtora').value.trim()||null,
@@ -820,7 +984,6 @@
       valor_inicial: parseFloat(document.getElementById('f-valor').value)||null,
       descricao: document.getElementById('f-descricao').value.trim()||null,
       google_maps: document.getElementById('f-gmaps').value.trim()||null,
-      whatsapp: document.getElementById('f-whatsapp').value.trim()||null,
       video_url: document.getElementById('f-video').value.trim()||null,
     };
     if (!id) dados.slug = gerarSlug(nome);
@@ -834,10 +997,22 @@
         if (res.error) throw res.error;
         empId = res.data.id;
       }
-      await uploadFiles(empId,'f-fotos','foto','fotos');
-      await uploadFile(empId,'f-book','book','books');
-      await uploadFile(empId,'f-tabela','tabela','tabelas');
-      await uploadFile(empId,'f-plantas','planta','plantas');
+
+      // Upload de arquivos com feedback
+      var temFotos = document.getElementById('f-fotos').files.length;
+      var temBook = document.getElementById('f-book').files.length;
+      var temTabela = document.getElementById('f-tabela').files.length;
+      var temPlantas = document.getElementById('f-plantas').files.length;
+      var totalUploads = temFotos + temBook + temTabela + temPlantas;
+
+      if (totalUploads > 0) {
+        btnSalvar.textContent = 'Enviando arquivos...';
+      }
+
+      if (temFotos) await uploadFiles(empId,'f-fotos','foto','fotos');
+      if (temBook) await uploadFile(empId,'f-book','book','books');
+      if (temTabela) await uploadFile(empId,'f-tabela','tabela','tabelas');
+      if (temPlantas) await uploadFile(empId,'f-plantas','planta','plantas');
 
       // Atualizar imagem_principal com primeira foto
       var fotosRes = await sb.from('arquivos').select('url').eq('empreendimento_id',empId).eq('tipo','foto').order('created_at').limit(1);
@@ -847,8 +1022,16 @@
 
       homeLoaded = false;
       mostrarToast(id?'Empreendimento atualizado!':'Empreendimento cadastrado!','success');
+      if (totalUploads > 0) mostrarToast(totalUploads + ' arquivo(s) enviado(s)','info');
       showAdminView('empreendimentos');
-    } catch(err) { console.error(err); mostrarToast('Erro ao salvar: '+err.message,'error'); }
+    } catch(err) {
+      console.error('salvarEmpreendimento error:', errMsg(err), err);
+      mostrarToast('Erro ao salvar: '+errMsg(err),'error');
+    } finally {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = btnTextoOriginal;
+      btnSalvar.classList.remove('opacity-60');
+    }
   };
 
   async function uploadFiles(empId,inputId,tipo,bucket) {
@@ -856,11 +1039,12 @@
     if (!input.files.length) return;
     for (var i=0; i<input.files.length; i++) {
       var file = input.files[i];
-      var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name;
+      var path = empId+'/'+tipo+'/'+Date.now()+'-'+i+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
       var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
-      if (res.error) { console.error(res.error); continue; }
+      if (res.error) { console.error('Upload erro ('+file.name+'):', errMsg(res.error)); mostrarToast('Erro ao enviar '+file.name+': '+errMsg(res.error),'error'); continue; }
       var urlData = sb.storage.from(bucket).getPublicUrl(path);
-      await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+      var insertRes = await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+      if (insertRes.error) { console.error('Insert arquivo erro:', errMsg(insertRes.error)); }
     }
   }
 
@@ -868,11 +1052,12 @@
     var input = document.getElementById(inputId);
     if (!input.files.length) return;
     var file = input.files[0];
-    var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name;
+    var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
     var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
-    if (res.error) { console.error(res.error); return; }
+    if (res.error) { console.error('Upload erro ('+file.name+'):', errMsg(res.error)); mostrarToast('Erro ao enviar '+file.name+': '+errMsg(res.error),'error'); return; }
     var urlData = sb.storage.from(bucket).getPublicUrl(path);
-    await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+    var insertRes = await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
+    if (insertRes.error) { console.error('Insert arquivo erro:', errMsg(insertRes.error)); }
   }
 
   window.excluirEmp = async function(id,nome) {
@@ -899,7 +1084,6 @@
     document.getElementById('cfg-id').value = data.id;
     document.getElementById('cfg-nome').value = data.nome_empresa||'';
     document.getElementById('cfg-telefone').value = data.telefone||'';
-    document.getElementById('cfg-whatsapp').value = data.whatsapp||'';
     if (data.logo_url) { var img = document.getElementById('cfg-logo-preview'); img.src=data.logo_url; img.classList.remove('hidden'); }
   }
 
@@ -908,7 +1092,6 @@
     var dados = {
       nome_empresa: document.getElementById('cfg-nome').value.trim(),
       telefone: document.getElementById('cfg-telefone').value.trim(),
-      whatsapp: document.getElementById('cfg-whatsapp').value.trim(),
     };
     var logoInput = document.getElementById('cfg-logo');
     if (logoInput.files.length) {
@@ -926,6 +1109,292 @@
     await sb.auth.signOut();
     location.hash = '#login';
   };
+
+  // ══════════════════════════════════════
+  // ASSISTENTE IA LOCAL
+  // ══════════════════════════════════════
+  var iaAberto = false;
+  var iaIniciado = false;
+
+  window.toggleIA = function() {
+    var panel = document.getElementById('ia-panel');
+    iaAberto = !iaAberto;
+    panel.style.display = iaAberto ? 'flex' : 'none';
+    if (iaAberto && !iaIniciado) {
+      iaIniciado = true;
+      addBotMsg('Olá! Sou o assistente da Lopes Prime 🏢\n\nPosso consultar todos os empreendimentos do catálogo. Pergunte sobre preços, cidades, metragens, construtoras, disponibilidade...\n\nO que deseja saber?');
+    }
+    if (iaAberto) document.getElementById('ia-input').focus();
+  };
+
+  window.sugestaoIA = function(btn) {
+    document.getElementById('ia-input').value = btn.textContent;
+    enviarIA();
+  };
+
+  window.enviarIA = function() {
+    var input = document.getElementById('ia-input');
+    var msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    addUserMsg(msg);
+    showTyping();
+    setTimeout(function() {
+      hideTyping();
+      var resp = processarPergunta(msg);
+      addBotMsg(resp);
+    }, 400 + Math.random() * 600);
+  };
+
+  function addBotMsg(text) {
+    var container = document.getElementById('ia-msgs');
+    var div = document.createElement('div');
+    div.className = 'ia-msg ia-bot fade-in';
+    div.innerHTML = text.replace(/\n/g, '<br>');
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function addUserMsg(text) {
+    var container = document.getElementById('ia-msgs');
+    var div = document.createElement('div');
+    div.className = 'ia-msg ia-user fade-in';
+    div.textContent = text;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function showTyping() {
+    var container = document.getElementById('ia-msgs');
+    var div = document.createElement('div');
+    div.id = 'ia-typing-ind';
+    div.className = 'ia-msg ia-bot ia-typing fade-in';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function hideTyping() {
+    var el = document.getElementById('ia-typing-ind');
+    if (el) el.remove();
+  }
+
+  function norm(t) {
+    return (t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  }
+
+  function fmtMoeda(v) {
+    if (!v) return 'não informado';
+    return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
+  }
+
+  function empCard(e) {
+    return '<div class="ia-emp-card" onclick="location.hash=\'#empreendimento/'+e.slug+'\';toggleIA()">'
+      + '<div style="font-weight:600;font-size:13px;color:#0f2240">' + e.nome + '</div>'
+      + '<div style="font-size:11px;color:#6b7280;margin-top:2px">'
+      + e.cidade + (e.bairro ? ' · ' + e.bairro : '')
+      + (e.construtora ? ' — ' + e.construtora : '')
+      + '</div>'
+      + '<div style="display:flex;gap:12px;margin-top:5px;font-size:11px">'
+      + '<span style="color:#1e40af;font-weight:600">' + fmtMoeda(e.valor_inicial) + '</span>'
+      + (e.metragem ? '<span style="color:#6b7280">' + e.metragem + '</span>' : '')
+      + (e.tipologia ? '<span style="color:#6b7280">' + e.tipologia + '</span>' : '')
+      + (e.entrega ? '<span style="color:#059669;font-weight:500">' + e.entrega + '</span>' : '')
+      + '</div></div>';
+  }
+
+  function getDados() {
+    return todosEmpreendimentos.length ? todosEmpreendimentos : todosEmpsAdmin;
+  }
+
+  function processarPergunta(msg) {
+    var t = norm(msg);
+    var dados = getDados();
+
+    if (!dados.length) {
+      return 'Ainda não carreguei os empreendimentos. Acesse a <b>página inicial</b> primeiro para eu ter acesso ao catálogo.';
+    }
+
+    // ── Saudações ──
+    if (/^(oi|ola|hey|bom dia|boa tarde|boa noite|e ai|eai|fala|salve|hello|hi)\b/.test(t)) {
+      return 'Olá! 👋 Tenho acesso a <b>' + dados.length + ' empreendimentos</b> no catálogo. Pergunte o que quiser — preços, cidades, construtoras, metragens, prontos para morar...';
+    }
+
+    // ── Agradecimento ──
+    if (/^(obrigad|valeu|vlw|thanks|brigad|graci)/.test(t)) {
+      return 'Por nada! 😊 Se precisar de mais alguma informação é só perguntar.';
+    }
+
+    // ── Ajuda ──
+    if (/^(ajuda|help|como funciona|o que voce|o que vc|comandos|menu)/.test(t)) {
+      return '📋 <b>Como posso ajudar:</b>\n\n'
+        + '• "Mais baratos" — lista os de menor valor\n'
+        + '• "Mais caros" — lista os de maior valor\n'
+        + '• "Prontos para morar" — já entregues\n'
+        + '• "Em [cidade]" — filtra por cidade\n'
+        + '• "Construtora [nome]" — filtra por construtora\n'
+        + '• "3 quartos" ou "2 dorms" — filtra por tipo\n'
+        + '• "Até 500 mil" — filtra por faixa de preço\n'
+        + '• "Quais cidades?" — lista as cidades\n'
+        + '• "Resumo geral" — visão completa\n'
+        + '• Nome do empreendimento — busca direto';
+    }
+
+    // ── Resumo geral ──
+    if (/resumo|visao geral|panorama|overview|status/.test(t)) {
+      var cidades = {}; var construtoras = {}; var prontos = 0; var total = dados.length;
+      var menorV = Infinity; var maiorV = 0;
+      dados.forEach(function(e) {
+        cidades[e.cidade] = (cidades[e.cidade]||0) + 1;
+        if (e.construtora) construtoras[e.construtora] = (construtoras[e.construtora]||0) + 1;
+        if (e.entrega && norm(e.entrega) === 'pronto') prontos++;
+        if (e.valor_inicial) { menorV = Math.min(menorV, e.valor_inicial); maiorV = Math.max(maiorV, e.valor_inicial); }
+      });
+      var cidadesStr = Object.keys(cidades).map(function(c) { return c + ' (' + cidades[c] + ')'; }).join(', ');
+      var constStr = Object.keys(construtoras).map(function(c) { return c + ' (' + construtoras[c] + ')'; }).join(', ');
+      return '📊 <b>Resumo do Catálogo</b>\n\n'
+        + '🏢 <b>' + total + '</b> empreendimentos ativos\n'
+        + '✅ <b>' + prontos + '</b> prontos para morar\n'
+        + '💰 Valores de <b>' + fmtMoeda(menorV === Infinity ? null : menorV) + '</b> a <b>' + fmtMoeda(maiorV || null) + '</b>\n\n'
+        + '📍 <b>Cidades:</b> ' + cidadesStr + '\n\n'
+        + '🏗️ <b>Construtoras:</b> ' + (constStr || 'não informadas');
+    }
+
+    // ── Quais cidades ──
+    if (/quais cidades|que cidades|cidades disponiveis|cidades tem|onde tem/.test(t)) {
+      var cids = {};
+      dados.forEach(function(e) { cids[e.cidade] = (cids[e.cidade]||0) + 1; });
+      var lista = Object.entries(cids).sort(function(a,b) { return b[1] - a[1]; });
+      return '📍 <b>Cidades com empreendimentos:</b>\n\n' + lista.map(function(c) {
+        return '• <b>' + c[0] + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
+      }).join('\n');
+    }
+
+    // ── Quais construtoras ──
+    if (/quais construtoras|que construtoras|construtoras disponiveis|construtoras tem/.test(t)) {
+      var consts = {};
+      dados.forEach(function(e) { if(e.construtora) consts[e.construtora] = (consts[e.construtora]||0) + 1; });
+      var lista = Object.entries(consts).sort(function(a,b) { return b[1] - a[1]; });
+      if (!lista.length) return 'Não há construtoras informadas nos cadastros.';
+      return '🏗️ <b>Construtoras:</b>\n\n' + lista.map(function(c) {
+        return '• <b>' + c[0] + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
+      }).join('\n');
+    }
+
+    // ── Quantos ──
+    if (/quantos|quantas|total|contagem|quantidade/.test(t)) {
+      // Quantos em cidade?
+      var cidMatch = t.match(/(?:quantos|quantas).*(?:em|na|no)\s+(.+)/);
+      if (cidMatch) {
+        var cidBusca = cidMatch[1].trim();
+        var filtrados = dados.filter(function(e) { return norm(e.cidade).indexOf(cidBusca) !== -1; });
+        if (filtrados.length) return 'Encontrei <b>' + filtrados.length + '</b> empreendimento' + (filtrados.length>1?'s':'') + ' em <b>' + filtrados[0].cidade + '</b>.';
+      }
+      return 'O catálogo tem <b>' + dados.length + '</b> empreendimentos ativos.';
+    }
+
+    // ── Prontos para morar ──
+    if (/pront|entregue|imediato|morar ja|ja pronto|chave/.test(t)) {
+      var prontos = dados.filter(function(e) { return e.entrega && norm(e.entrega) === 'pronto'; });
+      if (!prontos.length) return 'No momento não há empreendimentos com entrega imediata (status "Pronto") no catálogo.';
+      return '✅ <b>' + prontos.length + ' pronto' + (prontos.length>1?'s':'') + ' para morar:</b>' + prontos.map(empCard).join('');
+    }
+
+    // ── Mais baratos / menor preço ──
+    if (/mais barat|menor pre|menor val|mais em conta|economico|mais acessiv|baratinho/.test(t)) {
+      var comVal = dados.filter(function(e) { return e.valor_inicial; }).sort(function(a,b) { return a.valor_inicial - b.valor_inicial; });
+      if (!comVal.length) return 'Nenhum empreendimento tem valor cadastrado.';
+      var top = comVal.slice(0, 5);
+      return '💰 <b>Os mais acessíveis:</b>' + top.map(empCard).join('');
+    }
+
+    // ── Mais caros ──
+    if (/mais car|maior pre|maior val|premium|luxo|alto padrao/.test(t)) {
+      var comVal = dados.filter(function(e) { return e.valor_inicial; }).sort(function(a,b) { return b.valor_inicial - a.valor_inicial; });
+      if (!comVal.length) return 'Nenhum empreendimento tem valor cadastrado.';
+      var top = comVal.slice(0, 5);
+      return '💎 <b>Os de maior valor:</b>' + top.map(empCard).join('');
+    }
+
+    // ── Faixa de preço: "até X mil/milhão" ──
+    var faixaMatch = t.match(/ate\s+(\d+[\.,]?\d*)\s*(mil|k|milh|milhao|milhoes|mi|m\b)/);
+    if (faixaMatch) {
+      var valor = parseFloat(faixaMatch[1].replace(',', '.'));
+      var mult = /mil|k/.test(faixaMatch[2]) ? 1000 : 1000000;
+      var teto = valor * mult;
+      var filtrados = dados.filter(function(e) { return e.valor_inicial && e.valor_inicial <= teto; })
+        .sort(function(a,b) { return a.valor_inicial - b.valor_inicial; });
+      if (!filtrados.length) return 'Não encontrei empreendimentos com valor até <b>' + fmtMoeda(teto) + '</b>.';
+      var top = filtrados.slice(0, 6);
+      return '💰 <b>' + filtrados.length + ' empreendimento' + (filtrados.length>1?'s':'') + ' até ' + fmtMoeda(teto) + ':</b>' + top.map(empCard).join('')
+        + (filtrados.length > 6 ? '\n<i style="font-size:11px;color:#6b7280">...e mais ' + (filtrados.length - 6) + ' opções</i>' : '');
+    }
+
+    // ── Acima de X ──
+    var acimaMatch = t.match(/(?:acima|a partir|mais)\s*(?:de|que)\s+(\d+[\.,]?\d*)\s*(mil|k|milh|milhao|milhoes|mi|m\b)/);
+    if (acimaMatch) {
+      var valor = parseFloat(acimaMatch[1].replace(',', '.'));
+      var mult = /mil|k/.test(acimaMatch[2]) ? 1000 : 1000000;
+      var piso = valor * mult;
+      var filtrados = dados.filter(function(e) { return e.valor_inicial && e.valor_inicial >= piso; })
+        .sort(function(a,b) { return a.valor_inicial - b.valor_inicial; });
+      if (!filtrados.length) return 'Não encontrei empreendimentos com valor acima de <b>' + fmtMoeda(piso) + '</b>.';
+      var top = filtrados.slice(0, 6);
+      return '💎 <b>' + filtrados.length + ' empreendimento' + (filtrados.length>1?'s':'') + ' acima de ' + fmtMoeda(piso) + ':</b>' + top.map(empCard).join('');
+    }
+
+    // ── Filtro por quartos/dorms ──
+    var quartosMatch = t.match(/(\d)\s*(?:quarto|dorm|suite|suíte|qto|qt)/);
+    if (quartosMatch) {
+      var nQuartos = quartosMatch[1];
+      var filtrados = dados.filter(function(e) { return e.tipologia && e.tipologia.indexOf(nQuartos) !== -1; });
+      if (!filtrados.length) return 'Não encontrei empreendimentos com <b>' + nQuartos + ' quartos/dorms</b> na tipologia cadastrada.';
+      return '🛏️ <b>' + filtrados.length + ' com ' + nQuartos + ' quartos/dorms:</b>' + filtrados.slice(0,6).map(empCard).join('');
+    }
+
+    // ── Filtro por cidade: "em [cidade]" ──
+    var cidMatch2 = t.match(/(?:^em |em |na |no |de )([a-z\s]+)/);
+    if (cidMatch2) {
+      var cidBusca = cidMatch2[1].trim();
+      if (cidBusca.length >= 3) {
+        var filtrados = dados.filter(function(e) { return norm(e.cidade).indexOf(cidBusca) !== -1 || (e.bairro && norm(e.bairro).indexOf(cidBusca) !== -1); });
+        if (filtrados.length) {
+          return '📍 <b>' + filtrados.length + ' empreendimento' + (filtrados.length>1?'s':'') + ' em "' + cidBusca + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
+        }
+      }
+    }
+
+    // ── Filtro por construtora ──
+    var constMatch = t.match(/construtora\s+(.+)/);
+    if (constMatch) {
+      var cBusca = constMatch[1].trim();
+      var filtrados = dados.filter(function(e) { return e.construtora && norm(e.construtora).indexOf(cBusca) !== -1; });
+      if (filtrados.length) {
+        return '🏗️ <b>' + filtrados.length + ' da construtora "' + filtrados[0].construtora + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
+      }
+      return 'Não encontrei empreendimentos da construtora "<b>' + cBusca + '</b>".';
+    }
+
+    // ── Busca por nome (fallback geral) ──
+    var resultados = dados.filter(function(e) {
+      var nomeN = norm(e.nome);
+      var cidN = norm(e.cidade);
+      var bairroN = norm(e.bairro || '');
+      var constN = norm(e.construtora || '');
+      var palavras = t.split(/\s+/).filter(function(p) { return p.length >= 3; });
+      return palavras.some(function(p) {
+        return nomeN.indexOf(p) !== -1 || cidN.indexOf(p) !== -1 || bairroN.indexOf(p) !== -1 || constN.indexOf(p) !== -1;
+      });
+    });
+
+    if (resultados.length) {
+      return '🔍 Encontrei <b>' + resultados.length + ' resultado' + (resultados.length>1?'s':'') + '</b>:' + resultados.slice(0,6).map(empCard).join('')
+        + (resultados.length > 6 ? '\n<i style="font-size:11px;color:#6b7280">...e mais ' + (resultados.length - 6) + '</i>' : '');
+    }
+
+    // ── Não entendi ──
+    return '🤔 Não encontrei resultados para "<b>' + msg + '</b>".\n\nTente perguntar de outro jeito, por exemplo:\n• "Mais baratos"\n• "Em Santo André"\n• "Até 500 mil"\n• "3 quartos"\n• Ou o nome do empreendimento';
+  }
 
   // ── Init ──
   navigate();
