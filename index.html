@@ -722,8 +722,9 @@
     headerPublic.style.display = '';
     footerPublic.style.display = '';
 
-    // Todo acesso ao sistema exige login, exceto as telas de login e redefinição de senha.
-    if (view !== 'login' && view !== 'reset-senha') {
+    // Todo acesso ao sistema exige login, exceto: login, redefinição de senha
+    // e visualização pública de empreendimento (link compartilhado com cliente).
+    if (view !== 'login' && view !== 'reset-senha' && view !== 'empreendimento') {
       var sessaoRes = await sb.auth.getSession();
       if (!sessaoRes.data.session) {
         sessionStorage.setItem('lopes_redirect_after_login', location.hash || '#home');
@@ -947,6 +948,14 @@
 
       loading.classList.add('hidden');
       conteudo.classList.remove('hidden');
+
+      // Verifica sessão: se não há login (link aberto pelo cliente),
+      // oculta a barra de compartilhamento — ela é exclusiva para a equipe.
+      var sessaoPublica = await sb.auth.getSession();
+      var shareBar = document.getElementById('share-bar');
+      if (shareBar) {
+        shareBar.style.display = sessaoPublica.data.session ? '' : 'none';
+      }
     } catch(err) { console.error('loadEmpreendimento error:', errMsg(err), err); mostrarToast('Erro ao carregar empreendimento: ' + errMsg(err),'error'); location.hash='#home'; }
   }
 
@@ -2172,6 +2181,41 @@ $$;
 -- Qualquer usuário logado pode chamar essa função (via RPC) quando
 -- clica em "Compartilhar" ou "Copiar Link".
 grant execute on function increment_encaminhamento(uuid) to authenticated;
+
+-- ───────────────────────────────────────
+-- 5) LEITURA PÚBLICA de empreendimentos e arquivos
+--    Necessário para que o link enviado ao cliente abra sem exigir login.
+--    Execute estas linhas no SQL Editor do Supabase caso ainda não existam.
+-- ───────────────────────────────────────
+alter table empreendimentos enable row level security;
+
+-- Qualquer visitante (anônimo ou logado) pode VER empreendimentos.
+create policy if not exists "empreendimentos_public_select" on empreendimentos
+  for select using (true);
+
+-- Apenas usuários autenticados podem inserir/alterar/excluir.
+create policy if not exists "empreendimentos_auth_insert" on empreendimentos
+  for insert with check (auth.uid() is not null);
+
+create policy if not exists "empreendimentos_auth_update" on empreendimentos
+  for update using (auth.uid() is not null);
+
+create policy if not exists "empreendimentos_auth_delete" on empreendimentos
+  for delete using (auth.uid() is not null);
+
+alter table arquivos enable row level security;
+
+create policy if not exists "arquivos_public_select" on arquivos
+  for select using (true);
+
+create policy if not exists "arquivos_auth_insert" on arquivos
+  for insert with check (auth.uid() is not null);
+
+create policy if not exists "arquivos_auth_update" on arquivos
+  for update using (auth.uid() is not null);
+
+create policy if not exists "arquivos_auth_delete" on arquivos
+  for delete using (auth.uid() is not null);
 grant execute on function is_admin() to authenticated;
 
 
