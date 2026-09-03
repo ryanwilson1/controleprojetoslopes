@@ -903,6 +903,7 @@
   var salvandoEmpreendimento = false;  // trava de reentrância do formulário admin
   var homeEstado = { busca: '', cidade: '', construtora: '', scroll: 0 }; // restaurado ao voltar
   var cacheDiagnostico = null;         // evita reconsultar a base inteira no fallback
+  var admNovoSujo = false;             // true quando há alterações não salvas no formulário do admin
 
   // ── Router ──
   function getRoute() {
@@ -1336,7 +1337,7 @@
       if (currentEmpFotos.length) {
         semFotos.classList.add('hidden');
         galeriaEl.innerHTML = currentEmpFotos.map(function(f, i) {
-          return '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="' + i + '"><img src="' + safeUrl(f.url) + '" alt="' + esc(emp.nome) + '" class="w-full h-full object-cover" loading="lazy" data-ph="' + esc(phFoto) + '" onerror="if(this.src!==this.dataset.ph){this.src=this.dataset.ph;this.classList.add(\'opacity-60\')}"></div>';
+          return '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="' + i + '"><img src="' + safeUrl(f.url) + '" alt="Foto ' + (i+1) + ' de ' + esc(emp.nome) + '" class="w-full h-full object-cover" loading="lazy" data-ph="' + esc(phFoto) + '" onerror="if(this.src!==this.dataset.ph){this.src=this.dataset.ph;this.classList.add(\'opacity-60\')}"></div>';
         }).join('');
       } else { semFotos.classList.remove('hidden'); }
 
@@ -1744,6 +1745,12 @@
     if (view !== 'dashboard' && view !== 'clientes') {
       if (!window.currentUser || window.currentUser.role !== 'admin') { view = 'dashboard'; }
     }
+    // Sair do formulário com alterações não salvas exige confirmação — evita perda
+    // acidental de dados ao clicar em outra aba do menu.
+    var saindoDeNovoSujo = view !== 'novo' && admNovoSujo && !document.getElementById('adm-novo').classList.contains('hidden');
+    if (saindoDeNovoSujo && !confirm('Você tem alterações não salvas neste formulário. Deseja sair mesmo assim?')) {
+      return;
+    }
     ['adm-dashboard','adm-empreendimentos','adm-novo','adm-config','adm-usuarios','adm-acessos','adm-clientes'].forEach(function(id) { document.getElementById(id).classList.add('hidden'); });
     document.getElementById('adm-'+view).classList.remove('hidden');
     document.querySelectorAll('.sidebar-link').forEach(function(el) { el.classList.toggle('active', el.dataset.view === view); });
@@ -1919,12 +1926,24 @@
     }).join('');
   }
 
+  // Avisa antes de perder alterações não salvas no formulário de empreendimento —
+  // tanto ao fechar/recarregar a aba quanto ao navegar para outra tela do admin.
+  document.querySelectorAll('#adm-novo input, #adm-novo select, #adm-novo textarea').forEach(function(el) {
+    el.addEventListener('input', function(){ admNovoSujo = true; });
+    el.addEventListener('change', function(){ admNovoSujo = true; });
+  });
+  window.addEventListener('beforeunload', function(e) {
+    var emNovo = !document.getElementById('adm-novo').classList.contains('hidden');
+    if (admNovoSujo && emNovo) { e.preventDefault(); e.returnValue = ''; }
+  });
+
   document.getElementById('admin-busca').addEventListener('input', function(e) {
     var t = e.target.value.toLowerCase();
     renderAdminLista(todosEmpsAdmin.filter(function(emp) { return String(emp.nome||'').toLowerCase().indexOf(t)!==-1 || String(emp.cidade||'').toLowerCase().indexOf(t)!==-1; }));
   });
 
   function resetForm() {
+    admNovoSujo = false;
     document.getElementById('form-title').textContent = 'Novo Empreendimento';
     document.getElementById('f-id').value = '';
     ['f-nome','f-construtora','f-cidade','f-bairro','f-metragem','f-tipologia','f-entrega','f-valor','f-descricao','f-gmaps','f-video'].forEach(function(id) { document.getElementById(id).value=''; });
@@ -2235,6 +2254,7 @@
         if (refRes.data && refRes.data[0]) refSalvo = empRef(refRes.data[0]);
       } catch (eRef) { console.warn('[admin] Não foi possível obter a referência do registro salvo:', errMsg(eRef)); }
 
+      admNovoSujo = false; // salvo com sucesso: navegação seguinte não deve pedir confirmação
       mostrarToast(id?'Empreendimento atualizado!':'Empreendimento cadastrado!','success');
       relatarUploads(resultadoUploads);
       showAdminView('empreendimentos');
@@ -2258,6 +2278,61 @@
   // barramos antes com mensagem clara.
   var LIMITE_ARQUIVO_MB = 25;
 
+  // Redimensiona/comprime imagens no navegador antes do upload (fotos e plantas em JPG).
+  // Câmeras de celular mandam arquivos de 4-8MB; sem isso a galeria do cliente final
+  // carrega lento e o Storage enche rápido. GIFs e imagens já pequenas passam direto.
+  var COMPRESSAO_MAX_DIMENSAO = 1920;
+  var COMPRESSAO_QUALIDADE = 0.82;
+  var COMPRESSAO_MIN_BYTES = 400 * 1024; // abaixo disso não vale a pena gastar tempo comprimindo
+
+  function comprimirImagem(file) {
+    return new Promise(function(resolve) {
+      if (!file || !file.type || file.type.indexOf('image/') !== 0 || file.type === 'image/gif' || file.size <= COMPRESSAO_MIN_BYTES) {
+        resolve(file);
+        return;
+      }
+      var finalizado = false;
+      var objectUrl = URL.createObjectURL(file);
+      var limpar = function() { URL.revokeObjectURL(objectUrl); };
+      var falhar = function(motivo) {
+        if (finalizado) return;
+        finalizado = true;
+        console.warn('[compressão] "' + file.name + '" enviado sem comprimir (' + motivo + ').');
+        limpar();
+        resolve(file);
+      };
+      var img = new Image();
+      img.onload = function() {
+        if (finalizado) return;
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { falhar('dimensões inválidas'); return; }
+          var escala = Math.min(1, COMPRESSAO_MAX_DIMENSAO / Math.max(w, h));
+          var novaW = Math.max(1, Math.round(w * escala));
+          var novaH = Math.max(1, Math.round(h * escala));
+          var canvas = document.createElement('canvas');
+          canvas.width = novaW; canvas.height = novaH;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, novaW, novaH);
+          canvas.toBlob(function(blob) {
+            if (finalizado) return;
+            finalizado = true;
+            limpar();
+            if (!blob || blob.size >= file.size) { resolve(file); return; } // original já era menor
+            var novoNome = String(file.name || 'imagem').replace(/\.[^.]+$/, '') + '.jpg';
+            var arquivoFinal;
+            try { arquivoFinal = new File([blob], novoNome, {type:'image/jpeg', lastModified:Date.now()}); }
+            catch (e) { blob.name = novoNome; arquivoFinal = blob; } // fallback p/ navegadores sem File()
+            console.info('[compressão] "' + file.name + '": ' + (file.size/1024/1024).toFixed(1) + 'MB → ' + (arquivoFinal.size/1024/1024).toFixed(1) + 'MB');
+            resolve(arquivoFinal);
+          }, 'image/jpeg', COMPRESSAO_QUALIDADE);
+        } catch (e) { falhar(String(e)); }
+      };
+      img.onerror = function() { falhar('formato não suportado pelo navegador (ex.: HEIC)'); };
+      img.src = objectUrl;
+    });
+  }
+
   function validarArquivo(file, tipo) {
     if (!file || !file.size) return 'arquivo vazio ou ilegível';
     if (file.size > LIMITE_ARQUIVO_MB * 1024 * 1024) {
@@ -2273,6 +2348,9 @@
   // Sobe um arquivo e registra no banco. Retorna true SÓ se as duas etapas deram certo.
   // Se o Storage aceitar mas o insert falhar, remove o objeto para não deixar órfão.
   async function enviarUmArquivo(empId, file, tipo, bucket, indice) {
+    if (file && file.type && file.type.indexOf('image/') === 0) {
+      file = await comprimirImagem(file);
+    }
     var motivo = validarArquivo(file, tipo);
     if (motivo) {
       console.warn('[upload] Recusado:', file && file.name, '—', motivo);
