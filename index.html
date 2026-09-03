@@ -149,6 +149,21 @@
     <div class="w-9 h-9 border-[3px] border-pink-100 border-t-brand-600 rounded-full animate-spin"></div>
   </div>
 
+  <!-- Estado de erro: empreendimento não localizado (nunca mais volta silenciosamente para a Home) -->
+  <div id="emp-erro" class="hidden fade-in py-24 px-4">
+    <div class="max-w-md mx-auto text-center">
+      <div class="w-14 h-14 mx-auto mb-5 rounded-2xl bg-red-50 text-red-400 flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      </div>
+      <h2 class="font-display font-bold text-xl text-brand-800 mb-2">Não foi possível localizar este empreendimento.</h2>
+      <p id="emp-erro-detalhe" class="text-gray-400 text-sm mb-7 leading-relaxed">Ele pode ter sido removido ou o link está incorreto.</p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button onclick="navigateTo('home')" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-sm font-medium transition">Voltar para empreendimentos</button>
+        <button onclick="recarregarEmpreendimento()" class="px-6 py-3 rounded-xl text-sm text-gray-500 border border-gray-200 hover:bg-gray-50 transition">Tentar novamente</button>
+      </div>
+    </div>
+  </div>
+
   <div id="emp-conteudo" class="hidden fade-in">
     <!-- Cabeçalho do empreendimento -->
     <section class="hero-gradient text-white py-10 sm:py-14">
@@ -413,8 +428,13 @@
       <div id="adm-empreendimentos" class="hidden fade-in">
         <div class="flex items-center justify-between mb-6">
           <h1 class="font-display font-bold text-2xl text-brand-800">Empreendimentos</h1>
-          <button onclick="showAdminView('novo')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition">+ Novo</button>
+          <div class="flex gap-2">
+            <button id="btn-diagnostico" onclick="diagnosticarEmpreendimentos()" class="border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-sm font-medium transition" title="Analisa a saúde dos identificadores — não altera nada">Diagnóstico</button>
+            <button id="btn-normalizar-slugs" onclick="normalizarSlugs()" class="border border-gray-200 text-gray-600 hover:bg-gray-50 px-4 py-2 rounded-xl text-sm font-medium transition" title="Gera slug para empreendimentos antigos sem slug e resolve duplicidades">Corrigir links (slugs)</button>
+            <button onclick="showAdminView('novo')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition">+ Novo</button>
+          </div>
         </div>
+        <div id="diagnostico-resultado" class="hidden mb-4"></div>
         <input id="admin-busca" type="text" placeholder="Buscar..." class="w-full mb-4 px-4 py-3 rounded-xl border border-gray-200 text-sm bg-white">
         <div id="admin-lista" class="space-y-2"></div>
       </div>
@@ -698,9 +718,137 @@
     if (!v) return '-';
     return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0,maximumFractionDigits:0}).format(v);
   }
+  // ── Slug: normalização robusta ──
+  // Ordem correta: remove acentos → minúsculas → troca não-alfanumérico por hífen
+  // → colapsa hífens → remove hífens das pontas. Nunca retorna string vazia.
   function gerarSlug(t) {
-    return t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9\s-]/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').trim();
+    var s = (t == null ? '' : String(t))
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')   // acentos
+      .replace(/[ıİ]/g, 'i')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')       // qualquer coisa que não seja a-z0-9 vira hífen
+      .replace(/-+/g, '-')               // colapsa hífens duplicados
+      .replace(/^-+|-+$/g, '');          // remove hífens do início/fim (trim() NÃO fazia isso)
+    return s;
   }
+
+  // Slug garantidamente não-vazio (usa fallback quando o nome só tem símbolos/emoji)
+  function gerarSlugSeguro(nome, fallbackId) {
+    var s = gerarSlug(nome);
+    if (!s) s = 'empreendimento' + (fallbackId ? '-' + String(fallbackId).slice(0, 8) : '-' + Date.now().toString(36));
+    return s.slice(0, 120);
+  }
+
+  // Um slug é considerado válido quando é exatamente igual à sua própria normalização
+  // (protege contra slug com espaço, acento, maiúscula, hífen solto, null, etc.)
+  function slugValido(s) {
+    if (!s || typeof s !== 'string') return false;
+    var t = s.trim();
+    if (!t || t === 'null' || t === 'undefined') return false;
+    return t === gerarSlug(t);
+  }
+
+  function isUUID(v) {
+    return typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v.trim());
+  }
+
+  // ── Identificador de navegação (estratégia híbrida) ──
+  // Usa o slug quando ele existe e é válido (URL amigável e estável);
+  // cai para o ID (sempre único e sempre presente) quando não existe.
+  // NUNCA retorna undefined/null/vazio.
+  function empRef(emp) {
+    if (!emp) return '';
+    if (slugValido(emp.slug)) return emp.slug;
+    if (emp.id) return String(emp.id);
+    return '';
+  }
+
+  // ── Navegação centralizada ──
+  // Única porta de entrada para trocar de tela. Se o hash já for o destino,
+  // dispara a rota manualmente (hashchange não dispara quando o hash não muda).
+  window.navigateTo = function(view, ref) {
+    var destino = '#' + view + (ref ? '/' + encodeURIComponent(ref) : '');
+    if (location.hash === destino) { navigate(); return; }
+    location.hash = destino;
+  };
+
+  // Abrir empreendimento — usada pela Home, pela IA e por qualquer outro ponto.
+  window.abrirEmpreendimento = function(ref) {
+    if (!ref) { console.warn('abrirEmpreendimento: referência vazia — ignorado.'); mostrarToast('Empreendimento sem identificador válido.', 'error'); return; }
+    navigateTo('empreendimento', ref);
+  };
+  // ── Segurança: escape de dados vindos do banco antes de ir para innerHTML ──
+  // Todo texto cadastrado pelo usuário (nome, cidade, descrição, nome de arquivo…)
+  // passa por aqui. Impede HTML injection, XSS e atributos quebrados por aspas.
+  function esc(v) {
+    if (v === null || v === undefined) return '';
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Escape para valor que vai dentro de uma string JS em atributo onclick="...".
+  function escJs(v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '\\u003c').replace(/\r?\n/g, ' ');
+  }
+
+  // URL segura para src/href: só aceita http(s). Bloqueia javascript:, data:, vbscript:.
+  function safeUrl(u) {
+    if (!u) return '';
+    var s = String(u).trim();
+    if (!/^https?:\/\//i.test(s)) {
+      if (s) console.warn('[segurança] URL rejeitada (protocolo não permitido):', s.slice(0, 120));
+      return '';
+    }
+    return esc(s);
+  }
+
+  function placeholderImg(texto, w, h) {
+    return 'https://placehold.co/' + (w || 600) + 'x' + (h || 400) + '/1e40af/white?text=' + encodeURIComponent(String(texto || 'Imagem').slice(0, 40));
+  }
+
+  // ── Cópia de texto com fallback ──
+  // Clipboard API não existe em contexto inseguro (http) nem em navegadores antigos.
+  // Nunca deixa Promise rejeitada sem tratamento.
+  async function copiarTexto(txt) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(txt);
+        return true;
+      }
+    } catch (e) {
+      console.warn('[clipboard] Clipboard API falhou, usando fallback:', errMsg(e));
+    }
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (e2) {
+      console.error('[clipboard] Falha ao copiar:', errMsg(e2));
+      return false;
+    }
+  }
+
+  // Copia e avisa o usuário; se não der, mostra o link para cópia manual.
+  async function copiarComFeedback(txt) {
+    var ok = await copiarTexto(txt);
+    if (ok) mostrarToast('Link copiado!', 'success');
+    else { mostrarToast('Não foi possível copiar automaticamente. O link está no console.', 'warning'); console.info('[clipboard] Link para cópia manual:', txt); }
+    return ok;
+  }
+
   function mostrarToast(msg, tipo) {
     tipo = tipo || 'success';
     var c = document.getElementById('toast-container');
@@ -723,7 +871,19 @@
       o.querySelector('#confirm-ok').onclick = function() { o.remove(); resolve(true); };
     });
   }
-  function extractYouTubeId(url) { var m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s?]+)/); return m ? m[1] : null; }
+  function extractYouTubeId(url) {
+    if (!url) return null;
+    var m = String(url).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\s?/#"']+)/);
+    if (!m) return null;
+    var id = m[1];
+    // O ID do YouTube é sempre [A-Za-z0-9_-]. Qualquer outro caractere seria
+    // interpolado dentro do atributo src do iframe e permitiria escapar do atributo.
+    if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) {
+      console.warn('[vídeo] ID de YouTube rejeitado por conter caracteres inválidos:', id);
+      return null;
+    }
+    return id;
+  }
   function errMsg(err) {
     if (!err) return 'Erro desconhecido';
     if (typeof err === 'string') return err;
@@ -740,12 +900,28 @@
   var currentEmpFotos = [];
   var lbIndex = 0;
   var homeLoaded = false;
+  var salvandoEmpreendimento = false;  // trava de reentrância do formulário admin
+  var homeEstado = { busca: '', cidade: '', construtora: '', scroll: 0 }; // restaurado ao voltar
+  var cacheDiagnostico = null;         // evita reconsultar a base inteira no fallback
 
   // ── Router ──
   function getRoute() {
-    var h = location.hash.replace('#','') || 'home';
-    if (h.indexOf('empreendimento/') === 0) return { view: 'empreendimento', slug: h.split('/')[1] };
-    return { view: h, slug: null };
+    var h = (location.hash || '').replace(/^#/, '').trim();
+    if (!h) return { view: 'home', ref: null };
+
+    var partes = h.split('/');
+    var view = partes[0];
+
+    if (view === 'empreendimento') {
+      // Junta o restante (tolera slug com '/' acidental) e decodifica (%C3%A1 → á).
+      var bruto = partes.slice(1).join('/');
+      var ref = '';
+      try { ref = decodeURIComponent(bruto); } catch (e) { ref = bruto; }
+      ref = (ref || '').trim();
+      if (!ref || ref === 'undefined' || ref === 'null') ref = '';
+      return { view: 'empreendimento', ref: ref };
+    }
+    return { view: view, ref: null };
   }
 
   async function navigate() {
@@ -754,8 +930,19 @@
     if (location.hash.indexOf('access_token') !== -1) return;
     var route = getRoute();
     var view = route.view;
-    var slug = route.slug;
+    var ref = route.ref;
+
+    // Ao sair da tela de empreendimento, limpa tudo que pertencia ao anterior
+    // (fotos, PDFs, vídeo, mapa) para não vazar conteúdo entre navegações.
+    if (view !== 'empreendimento') resetEmpreendimentoView();
+
     document.querySelectorAll('.view-section').forEach(function(v) { v.classList.remove('active'); });
+
+    // Guarda pesquisa, filtros e posição da Home antes de sair dela,
+    // para que "voltar" devolva o usuário exatamente onde ele estava.
+    if (view === 'empreendimento' && document.getElementById('view-home').classList.contains('active')) {
+      salvarEstadoHome();
+    }
 
     var headerPublic = document.getElementById('header-public');
     var footerPublic = document.getElementById('footer-public');
@@ -778,9 +965,16 @@
       document.getElementById('view-home').classList.add('active');
       document.title = 'imobIA — Portal do corretor - Equipe Akani';
       loadHome();
-    } else if (view === 'empreendimento' && slug) {
+    } else if (view === 'empreendimento') {
       document.getElementById('view-empreendimento').classList.add('active');
-      loadEmpreendimento(slug);
+      if (ref) {
+        loadEmpreendimento(ref);
+      } else {
+        // Hash do tipo '#empreendimento/' ou '#empreendimento/undefined':
+        // mostra erro explícito em vez de devolver o usuário para a Home.
+        console.error('[router] Rota de empreendimento sem identificador. Hash atual:', location.hash);
+        mostrarErroEmpreendimento('', 'O link não contém o identificador do empreendimento.');
+      }
     } else if (view === 'login') {
       headerPublic.style.display = 'none';
       footerPublic.style.display = 'none';
@@ -800,9 +994,11 @@
       document.title = 'Admin — imobIA';
       await checkAuth();
     } else {
-      location.hash = '#home';
+      console.warn('[router] Rota desconhecida:', JSON.stringify(view), '— redirecionando para a Home.');
+      navigateTo('home');
     }
-    window.scrollTo(0,0);
+    // Ao voltar para a Home, a rolagem é restaurada em restaurarEstadoHome().
+    if (view !== 'home') window.scrollTo(0,0);
   }
 
   window.addEventListener('hashchange', navigate);
@@ -810,8 +1006,42 @@
   // ══════════════════════════════════════
   // HOME
   // ══════════════════════════════════════
+  function salvarEstadoHome() {
+    try {
+      homeEstado = {
+        busca: document.getElementById('busca').value || '',
+        cidade: document.getElementById('filtro-cidade').value || '',
+        construtora: document.getElementById('filtro-construtora').value || '',
+        scroll: window.scrollY || window.pageYOffset || 0
+      };
+    } catch (e) { console.warn('[home] Não foi possível salvar o estado:', errMsg(e)); }
+  }
+
+  function restaurarEstadoHome() {
+    try {
+      var b = document.getElementById('busca');
+      var c = document.getElementById('filtro-cidade');
+      var co = document.getElementById('filtro-construtora');
+      if (b) b.value = homeEstado.busca;
+      // As <option> só existem depois que loadHome() preencheu os selects.
+      if (c && (!homeEstado.cidade || Array.prototype.some.call(c.options, function(o){return o.value===homeEstado.cidade;}))) c.value = homeEstado.cidade;
+      if (co && (!homeEstado.construtora || Array.prototype.some.call(co.options, function(o){return o.value===homeEstado.construtora;}))) co.value = homeEstado.construtora;
+
+      var temFiltro = homeEstado.busca || homeEstado.cidade || homeEstado.construtora;
+      if (temFiltro) filtrarHome(); else renderGrid(todosEmpreendimentos);
+
+      // Aguarda o grid pintar antes de reposicionar a rolagem.
+      var alvo = homeEstado.scroll || 0;
+      requestAnimationFrame(function() { window.scrollTo(0, alvo); });
+    } catch (e) {
+      console.warn('[home] Não foi possível restaurar o estado:', errMsg(e));
+      renderGrid(todosEmpreendimentos);
+    }
+  }
+
   async function loadHome() {
-    if (homeLoaded) { renderGrid(todosEmpreendimentos); return; }
+    // Já carregado: apenas repinta respeitando pesquisa/filtros e a posição anterior.
+    if (homeLoaded) { restaurarEstadoHome(); return; }
     try {
       var res = await sb.from('empreendimentos').select('*').eq('ativo',true).order('nome');
       // Fallback: se a coluna 'ativo' não existir, busca sem filtro
@@ -833,8 +1063,8 @@
         if (e.construtora && construtoras.indexOf(e.construtora) === -1) construtoras.push(e.construtora);
       });
       cidades.sort(); construtoras.sort();
-      cidades.forEach(function(c) { fc.insertAdjacentHTML('beforeend','<option value="'+c+'">'+c+'</option>'); });
-      construtoras.forEach(function(c) { fco.insertAdjacentHTML('beforeend','<option value="'+c+'">'+c+'</option>'); });
+      cidades.forEach(function(c) { fc.insertAdjacentHTML('beforeend','<option value="'+esc(c)+'">'+esc(c)+'</option>'); });
+      construtoras.forEach(function(c) { fco.insertAdjacentHTML('beforeend','<option value="'+esc(c)+'">'+esc(c)+'</option>'); });
 
       renderGrid(todosEmpreendimentos);
       homeLoaded = true;
@@ -851,7 +1081,8 @@
     var c = document.getElementById('filtro-cidade').value;
     var co = document.getElementById('filtro-construtora').value;
     var f = todosEmpreendimentos.filter(function(e) {
-      if (t && e.nome.toLowerCase().indexOf(t) === -1) return false;
+      // Campos podem vir null do banco — comparar sem guard quebrava a pesquisa inteira.
+      if (t && String(e.nome || '').toLowerCase().indexOf(t) === -1) return false;
       if (c && e.cidade !== c) return false;
       if (co && e.construtora !== co) return false;
       return true;
@@ -870,34 +1101,43 @@
     es.classList.add('hidden');
     rc.textContent = lista.length + ' empreendimento' + (lista.length>1?'s':'');
     lista.forEach(function(emp,i) {
-      var imgUrl = emp.imagem_principal || 'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome);
       var card = document.createElement('a');
-      card.href = '#empreendimento/' + emp.slug;
+      var ref = empRef(emp);
+      if (!ref) {
+        // Registro sem slug E sem id: não é navegável. Loga e pula em vez de gerar
+        // '#empreendimento/undefined', que era o que levava o usuário de volta à Home.
+        console.error('[home] Empreendimento sem identificador navegável, card ignorado:', emp);
+        return;
+      }
+      card.href = '#empreendimento/' + encodeURIComponent(ref);
       card.className = 'card-hover bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100/80 fade-in block';
       card.style.animationDelay = (i*0.04) + 's';
       var statusBadge = '';
       if (emp.entrega === 'Pronto') {
         statusBadge = '<span class="badge-status bg-emerald-500/90 text-white absolute top-3 left-3 backdrop-blur-sm">Pronto</span>';
       }
+      var nomeSeguro = esc(emp.nome);
+      var ph = placeholderImg(emp.nome);
+      var imgUrl = safeUrl(emp.imagem_principal) || ph;
       card.innerHTML =
         '<div class="aspect-[16/10] overflow-hidden bg-gray-100 relative">' +
-          '<img src="' + imgUrl + '" alt="' + emp.nome + '" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" onerror="this.src=\'https://placehold.co/600x400/1e40af/white?text=' + encodeURIComponent(emp.nome) + '\'">' +
+          '<img src="' + imgUrl + '" alt="' + nomeSeguro + '" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" data-ph="' + esc(ph) + '" onerror="if(this.src!==this.dataset.ph){this.src=this.dataset.ph}">' +
           statusBadge +
         '</div>' +
         '<div class="p-4 sm:p-5">' +
-          (emp.construtora ? '<p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">' + emp.construtora + '</p>' : '') +
-          '<h3 class="font-semibold text-brand-800 text-[15px] leading-snug mb-2">' + emp.nome + '</h3>' +
+          (emp.construtora ? '<p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">' + esc(emp.construtora) + '</p>' : '') +
+          '<h3 class="font-semibold text-brand-800 text-[15px] leading-snug mb-2">' + nomeSeguro + '</h3>' +
           '<p class="text-gray-400 text-xs mb-3 flex items-center gap-1">' +
             '<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>' +
-            emp.cidade + (emp.bairro?' · '+emp.bairro:'') +
+            esc(emp.cidade || '') + (emp.bairro ? ' · ' + esc(emp.bairro) : '') +
           '</p>' +
           '<div class="flex flex-wrap gap-1.5 mb-4">' +
-            (emp.metragem?'<span class="tag-chip bg-pink-50 text-brand-600">'+emp.metragem+'</span>':'') +
-            (emp.tipologia?'<span class="tag-chip bg-gray-50 text-gray-500">'+emp.tipologia+'</span>':'') +
+            (emp.metragem?'<span class="tag-chip bg-pink-50 text-brand-600">'+esc(emp.metragem)+'</span>':'') +
+            (emp.tipologia?'<span class="tag-chip bg-gray-50 text-gray-500">'+esc(emp.tipologia)+'</span>':'') +
           '</div>' +
           '<div class="flex items-center justify-between pt-3 border-t border-gray-100">' +
             '<div><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">A partir de</p><p class="text-brand-600 font-bold text-sm">' + formatarMoeda(emp.valor_inicial) + '</p></div>' +
-            (emp.entrega&&emp.entrega!=='Pronto'?'<div class="text-right"><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Entrega</p><p class="text-xs font-semibold text-gray-600">'+emp.entrega+'</p></div>':'') +
+            (emp.entrega&&emp.entrega!=='Pronto'?'<div class="text-right"><p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Entrega</p><p class="text-xs font-semibold text-gray-600">'+esc(emp.entrega)+'</p></div>':'') +
           '</div>' +
         '</div>';
       grid.appendChild(card);
@@ -912,21 +1152,164 @@
   // ══════════════════════════════════════
   // EMPREENDIMENTO (detalhe)
   // ══════════════════════════════════════
-  async function loadEmpreendimento(slug) {
-    var loading = document.getElementById('emp-loading');
-    var conteudo = document.getElementById('emp-conteudo');
-    loading.classList.remove('hidden');
-    conteudo.classList.add('hidden');
+  // ── Estado do detalhe (controle de corrida e limpeza) ──
+  var empReqToken = 0;        // incrementa a cada abertura: respostas antigas são descartadas
+  var empRefAtual = null;     // referência (slug ou id) atualmente na tela
+  var empCarregando = false;  // evita chamada duplicada para a mesma referência
+
+  // Limpa TODO o conteúdo do empreendimento anterior.
+  // Chamada antes de cada nova consulta e ao sair da view.
+  function resetEmpreendimentoView() {
+    // Fecha o lightbox se estiver aberto (não pode sobrar foto do anterior)
+    var lbEl = document.getElementById('lightbox');
+    if (lbEl) { lbEl.classList.add('hidden'); lbEl.classList.remove('flex'); }
+    var lbImgEl = document.getElementById('lb-img');
+    if (lbImgEl) lbImgEl.removeAttribute('src');
+    currentEmpFotos = [];
+    lbIndex = 0;
+
+    // Textos
+    var txt = {
+      'emp-nome': '', 'emp-construtora': '', 'emp-valor': '',
+      'emp-metragem': '', 'emp-tipologia': '', 'emp-entrega': '', 'emp-descricao': ''
+    };
+    Object.keys(txt).forEach(function(id) { var el = document.getElementById(id); if (el) el.textContent = txt[id]; });
+    var local = document.getElementById('emp-local');
+    if (local && local.querySelector('span')) local.querySelector('span').textContent = '';
+    var obs = document.getElementById('emp-obs');
+    if (obs) { obs.classList.add('hidden'); if (obs.querySelector('span')) obs.querySelector('span').textContent = ''; }
+
+    // Galeria
+    var galeria = document.getElementById('galeria');
+    if (galeria) galeria.innerHTML = '';
+    var semFotos = document.getElementById('sem-fotos');
+    if (semFotos) semFotos.classList.add('hidden');
+
+    // PDFs (Book / Tabela / Plantas)
+    [['book-list','sem-book'], ['tabela-list','sem-tabela'], ['plantas-list','sem-plantas']].forEach(function(par) {
+      var c = document.getElementById(par[0]); if (c) c.innerHTML = '';
+      var e = document.getElementById(par[1]); if (e) e.classList.add('hidden');
+    });
+
+    // Vídeo — remove o iframe antigo (senão o vídeo anterior continua tocando)
+    var videoSec = document.getElementById('video-sec');
+    var videoC = document.getElementById('video-container');
+    if (videoC) videoC.innerHTML = '';
+    if (videoSec) videoSec.classList.add('hidden');
+
+    // Mapa — remove o iframe antigo
+    var mapaC = document.getElementById('mapa-container');
+    if (mapaC) { mapaC.innerHTML = ''; mapaC.classList.add('hidden'); }
+    var semMapa = document.getElementById('sem-mapa');
+    if (semMapa) semMapa.classList.add('hidden');
+
+    document.title = 'imobIA — Portal do corretor - Equipe Akani';
+  }
+
+  function mostrarLoadingEmpreendimento() {
+    var l = document.getElementById('emp-loading');
+    var c = document.getElementById('emp-conteudo');
+    var e = document.getElementById('emp-erro');
+    if (l) l.classList.remove('hidden');
+    if (c) c.classList.add('hidden');
+    if (e) e.classList.add('hidden');
+  }
+
+  function mostrarErroEmpreendimento(ref, detalhe) {
+    var l = document.getElementById('emp-loading');
+    var c = document.getElementById('emp-conteudo');
+    var e = document.getElementById('emp-erro');
+    if (l) l.classList.add('hidden');
+    if (c) c.classList.add('hidden');
+    if (e) e.classList.remove('hidden');
+    var d = document.getElementById('emp-erro-detalhe');
+    if (d) d.textContent = detalhe || 'Ele pode ter sido removido ou o link está incorreto.';
+    console.error('[empreendimento] Não localizado. Identificador pesquisado:', JSON.stringify(ref), '| Motivo:', detalhe || '(sem detalhe)');
+  }
+
+  window.recarregarEmpreendimento = function() {
+    if (empRefAtual) { empCarregando = false; loadEmpreendimento(empRefAtual, true); }
+    else navigateTo('home');
+  };
+
+  // ── Busca híbrida: slug → id → recuperação por nome ──
+  // Retorna { emp: <registro> } ou { erro: '<motivo>' }.
+  async function buscarEmpreendimentoPorRef(ref) {
+    var SELECT = '*, arquivos(*)';
+
+    // 1) Por SLUG. Usa limit(1) em vez de .single(): .single() dispara erro
+    //    tanto quando não há linhas quanto quando há DUPLICADAS.
+    if (!isUUID(ref)) {
+      var r1 = await sb.from('empreendimentos').select(SELECT).eq('slug', ref).order('id').limit(1);
+      if (r1.error && r1.error.code !== '42703') console.warn('[empreendimento] Falha na busca por slug:', errMsg(r1.error));
+      if (!r1.error && r1.data && r1.data.length) return { emp: r1.data[0] };
+    }
+
+    // 2) Por ID (identificador sempre único e sempre presente).
+    if (isUUID(ref) || /^\d+$/.test(ref)) {
+      var r2 = await sb.from('empreendimentos').select(SELECT).eq('id', ref).limit(1);
+      if (r2.error) console.warn('[empreendimento] Falha na busca por id:', errMsg(r2.error));
+      if (!r2.error && r2.data && r2.data.length) return { emp: r2.data[0] };
+    }
+
+    // 3) Recuperação: link antigo cujo slug foi gerado a partir do nome,
+    //    ou registro cujo slug no banco está com acento/maiúscula/espaço.
+    //    A tabela leve (id, nome, slug) é cacheada por 5 min para que uma
+    //    sequência de links quebrados não dispare uma varredura por clique.
+    var alvo = gerarSlug(ref);
+    if (alvo) {
+      var agora = Date.now();
+      if (!cacheDiagnostico || (agora - cacheDiagnostico.em) > 300000) {
+        var r3 = await sb.from('empreendimentos').select('id, nome, slug').order('nome');
+        if (r3.error) { console.warn('[empreendimento] Fallback indisponível:', errMsg(r3.error)); return { erro: 'Nenhum empreendimento corresponde a este link.' }; }
+        cacheDiagnostico = { em: agora, dados: r3.data || [] };
+      }
+      var base = cacheDiagnostico.dados;
+      var achado = null;
+      for (var i = 0; i < base.length; i++) {
+        var e = base[i];
+        if (gerarSlug(e.slug || '') === alvo || gerarSlug(e.nome || '') === alvo) { achado = e; break; }
+      }
+      if (achado) {
+        console.warn('[empreendimento] Recuperado por normalização de nome/slug:', ref, '→ id', achado.id);
+        var r4 = await sb.from('empreendimentos').select(SELECT).eq('id', achado.id).limit(1);
+        if (!r4.error && r4.data && r4.data.length) return { emp: r4.data[0] };
+      }
+    }
+
+    return { erro: 'Nenhum empreendimento corresponde a este link.' };
+  }
+
+  async function loadEmpreendimento(ref, forcar) {
+    ref = (ref == null ? '' : String(ref)).trim();
+    if (!ref) { mostrarErroEmpreendimento(ref, 'O link não contém o identificador do empreendimento.'); return; }
+
+    // Evita reexecução para a mesma referência (clique duplo, navigate() repetido).
+    if (!forcar && empCarregando && empRefAtual === ref) {
+      console.warn('[empreendimento] Carregamento já em andamento para:', ref, '— chamada ignorada.');
+      return;
+    }
+
+    var token = ++empReqToken;
+    empRefAtual = ref;
+    empCarregando = true;
+
+    resetEmpreendimentoView();          // limpa o anterior ANTES de consultar
+    mostrarLoadingEmpreendimento();     // e só então mostra o loading
 
     try {
-      var res = await sb.from('empreendimentos').select('*, arquivos(*)').eq('slug',slug).single();
-      if (res.error || !res.data) { location.hash='#home'; return; }
-      var emp = res.data;
+      var busca = await buscarEmpreendimentoPorRef(ref);
+
+      if (token !== empReqToken) { console.info('[empreendimento] Resposta obsoleta descartada para:', ref); return; }
+
+      if (!busca.emp) { mostrarErroEmpreendimento(ref, busca.erro); return; }
+
+      var emp = busca.emp;
       document.title = emp.nome + ' — imobIA';
 
       document.getElementById('emp-nome').textContent = emp.nome;
       document.getElementById('emp-construtora').textContent = emp.construtora || '';
-      document.getElementById('emp-local').querySelector('span').textContent = emp.cidade + (emp.bairro?' · '+emp.bairro:'');
+      document.getElementById('emp-local').querySelector('span').textContent = (emp.cidade || '') + (emp.bairro ? ' · ' + emp.bairro : '');
       document.getElementById('emp-valor').textContent = formatarMoeda(emp.valor_inicial);
       document.getElementById('emp-metragem').textContent = emp.metragem || '-';
       document.getElementById('emp-tipologia').textContent = emp.tipologia || '-';
@@ -937,86 +1320,128 @@
       if (emp.observacoes) { obsEl.classList.remove('hidden'); obsEl.querySelector('span').textContent = emp.observacoes; }
       else obsEl.classList.add('hidden');
 
-      currentEmpFotos = (emp.arquivos||[]).filter(function(a){return a.tipo==='foto'});
-      var books = (emp.arquivos||[]).filter(function(a){return a.tipo==='book'});
-      var tabelas = (emp.arquivos||[]).filter(function(a){return a.tipo==='tabela'});
-      var plantas = (emp.arquivos||[]).filter(function(a){return a.tipo==='planta'});
+      var arquivos = emp.arquivos || [];
+      currentEmpFotos = arquivos.filter(function(a){ return a.tipo === 'foto' && a.url && /^https?:\/\//i.test(String(a.url).trim()); });
+      var books   = arquivos.filter(function(a){ return a.tipo === 'book'; });
+      var tabelas = arquivos.filter(function(a){ return a.tipo === 'tabela'; });
+      var plantas = arquivos.filter(function(a){ return a.tipo === 'planta'; });
 
+      // Galeria — montada em bloco único (evita reflow por foto) e sempre do zero.
+      // Fotos sem URL ou com URL inválida são descartadas antes de renderizar,
+      // para que o índice do lightbox nunca aponte para um item quebrado.
       var galeriaEl = document.getElementById('galeria');
-      galeriaEl.innerHTML = '';
       var semFotos = document.getElementById('sem-fotos');
+      galeriaEl.innerHTML = '';
+      var phFoto = placeholderImg('Imagem indisponível', 600, 450);
       if (currentEmpFotos.length) {
         semFotos.classList.add('hidden');
-        currentEmpFotos.forEach(function(f,i) { galeriaEl.innerHTML += '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="'+i+'"><img src="'+f.url+'" alt="" class="w-full h-full object-cover" loading="lazy"></div>'; });
+        galeriaEl.innerHTML = currentEmpFotos.map(function(f, i) {
+          return '<div class="gallery-img aspect-[4/3] rounded-xl overflow-hidden bg-gray-100" data-index="' + i + '"><img src="' + safeUrl(f.url) + '" alt="' + esc(emp.nome) + '" class="w-full h-full object-cover" loading="lazy" data-ph="' + esc(phFoto) + '" onerror="if(this.src!==this.dataset.ph){this.src=this.dataset.ph;this.classList.add(\'opacity-60\')}"></div>';
+        }).join('');
       } else { semFotos.classList.remove('hidden'); }
 
       renderPdfs('book-list','sem-book',books,'Book');
       renderPdfs('tabela-list','sem-tabela',tabelas,'Tabela');
       renderPdfs('plantas-list','sem-plantas',plantas,'Planta');
 
+      // Vídeo — só aparece com URL válida; o iframe anterior já foi removido no reset.
       var videoSec = document.getElementById('video-sec');
-      if (emp.video_url) {
+      var videoC = document.getElementById('video-container');
+      videoC.innerHTML = '';
+      var vid = emp.video_url ? extractYouTubeId(emp.video_url) : null;
+      if (vid) {
         videoSec.classList.remove('hidden');
-        var vid = extractYouTubeId(emp.video_url);
-        if (vid) document.getElementById('video-container').innerHTML = '<iframe src="https://www.youtube.com/embed/'+vid+'" class="w-full h-full" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>';
-      } else videoSec.classList.add('hidden');
+        videoC.innerHTML = '<iframe src="https://www.youtube.com/embed/' + vid + '" class="w-full h-full" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture" allowfullscreen></iframe>';
+      } else {
+        if (emp.video_url) console.warn('[empreendimento] URL de vídeo não reconhecida como YouTube:', emp.video_url);
+        videoSec.classList.add('hidden');
+      }
 
+      // Mapa — aceita URL de embed ou um <iframe> colado inteiro; valida antes de inserir.
       var mapaC = document.getElementById('mapa-container');
       var semMapa = document.getElementById('sem-mapa');
+      mapaC.innerHTML = '';
+      var mapSrc = null;
       if (emp.google_maps) {
+        var bruto = String(emp.google_maps).trim();
+        mapSrc = bruto.indexOf('<iframe') !== -1 ? (bruto.match(/src="([^"]+)"/) || [])[1] : bruto;
+        if (mapSrc && !/^https?:\/\//i.test(mapSrc)) { console.warn('[empreendimento] URL de mapa inválida:', mapSrc); mapSrc = null; }
+      }
+      if (mapSrc) {
         semMapa.classList.add('hidden'); mapaC.classList.remove('hidden');
-        var src = emp.google_maps.indexOf('<iframe') !== -1 ? (emp.google_maps.match(/src="([^"]+)"/) || [])[1] : emp.google_maps;
-        if (src) mapaC.innerHTML = '<iframe src="'+src+'" class="w-full h-full border-0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+        mapaC.innerHTML = '<iframe src="' + esc(mapSrc) + '" class="w-full h-full border-0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
       } else { semMapa.classList.remove('hidden'); mapaC.classList.add('hidden'); }
 
-      // Compartilhamento — usa API nativa ou copia o link
-      var pageUrl = location.href;
-      document.getElementById('btn-compartilhar').onclick = function() {
+      // Compartilhamento — o link divulgado usa sempre a referência canônica do registro.
+      var refCanonica = empRef(emp);
+      var pageUrl = location.origin + location.pathname + location.search + '#empreendimento/' + encodeURIComponent(refCanonica);
+      document.getElementById('btn-compartilhar').onclick = async function() {
         var texto = 'Confira o empreendimento ' + emp.nome + ':\n' + pageUrl;
         registrarEncaminhamento(emp.id);
         if (navigator.share) {
-          navigator.share({title:emp.nome, text:texto, url:pageUrl}).catch(function(){});
-        } else {
-          navigator.clipboard.writeText(pageUrl).then(function() {
-            mostrarToast('Link copiado!','success');
-          });
+          try { await navigator.share({title:emp.nome, text:texto, url:pageUrl}); return; }
+          catch (e) {
+            // Usuário cancelou o menu nativo: não é erro, não faz nada.
+            if (e && e.name === 'AbortError') return;
+            console.warn('[compartilhar] Share nativo falhou, copiando o link:', errMsg(e));
+          }
         }
+        await copiarComFeedback(pageUrl);
       };
       document.getElementById('btn-copiar').onclick = async function() {
-        await navigator.clipboard.writeText(pageUrl);
         registrarEncaminhamento(emp.id);
-        mostrarToast('Link copiado!','success');
+        await copiarComFeedback(pageUrl);
       };
 
-      loading.classList.add('hidden');
-      conteudo.classList.remove('hidden');
+      if (token !== empReqToken) return;
+      document.getElementById('emp-loading').classList.add('hidden');
+      document.getElementById('emp-erro').classList.add('hidden');
+      document.getElementById('emp-conteudo').classList.remove('hidden');
 
       // Verifica sessão: se não há login (link aberto pelo cliente),
       // oculta a barra de compartilhamento — ela é exclusiva para a equipe.
       var sessaoPublica = await sb.auth.getSession();
+      if (token !== empReqToken) return;
       var shareBar = document.getElementById('share-bar');
-      if (shareBar) {
-        shareBar.style.display = sessaoPublica.data.session ? '' : 'none';
+      if (shareBar) shareBar.style.display = sessaoPublica.data.session ? '' : 'none';
+
+    } catch(err) {
+      if (token !== empReqToken) return;
+      console.error('[empreendimento] Erro ao carregar. Identificador pesquisado:', JSON.stringify(ref), '| Erro:', errMsg(err), err);
+      mostrarErroEmpreendimento(ref, 'Ocorreu um erro ao buscar os dados: ' + errMsg(err));
+    } finally {
+      if (token === empReqToken) {
+        empCarregando = false;
+        var l = document.getElementById('emp-loading');
+        if (l) l.classList.add('hidden');   // loading sempre encerra, inclusive em erro
       }
-    } catch(err) { console.error('loadEmpreendimento error:', errMsg(err), err); mostrarToast('Erro ao carregar empreendimento: ' + errMsg(err),'error'); location.hash='#home'; }
+    }
   }
 
   function renderPdfs(containerId, emptyId, files, label) {
     var c = document.getElementById(containerId);
+    if (!c) return;
     c.innerHTML = '';
-    if (files.length) {
-      document.getElementById(emptyId).classList.add('hidden');
-      files.forEach(function(f) {
-        c.innerHTML += '<a href="'+f.url+'" target="_blank" class="pdf-card flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 transition">'
+    // Só entram na lista os arquivos com URL http(s) utilizável.
+    var validos = (files || []).filter(function(f) {
+      var ok = !!safeUrl(f.url);
+      if (!ok) console.warn('[arquivos] ' + label + ' ignorado por URL inválida/ausente. id:', f.id, 'url:', f.url);
+      return ok;
+    });
+    var vazio = document.getElementById(emptyId);
+    if (validos.length) {
+      if (vazio) vazio.classList.add('hidden');
+      c.innerHTML = validos.map(function(f) {
+        return '<a href="'+safeUrl(f.url)+'" target="_blank" rel="noopener noreferrer" class="pdf-card flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 transition">'
           + '<div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center text-red-400 shrink-0">'
           + '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>'
           + '</div>'
-          + '<div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-700 truncate">'+(f.nome||label)+'</p><p class="text-[11px] text-gray-400">PDF — Clique para abrir</p></div>'
+          + '<div class="flex-1 min-w-0"><p class="text-sm font-medium text-gray-700 truncate">'+esc(f.nome||label)+'</p><p class="text-[11px] text-gray-400">PDF — Clique para abrir</p></div>'
           + '<svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>'
           + '</a>';
-      });
+      }).join('');
     } else {
-      document.getElementById(emptyId).classList.remove('hidden');
+      if (vazio) vazio.classList.remove('hidden');
     }
   }
 
@@ -1026,13 +1451,32 @@
   document.getElementById('galeria').addEventListener('click', function(e) {
     var item = e.target.closest('.gallery-img');
     if (!item || !currentEmpFotos.length) return;
-    lbIndex = parseInt(item.dataset.index);
-    lbImg.src = currentEmpFotos[lbIndex].url;
+    var idx = parseInt(item.dataset.index, 10);
+    // currentEmpFotos é sempre reescrito ao trocar de empreendimento; este guard
+    // garante que um índice órfão nunca abra a foto de outro empreendimento.
+    if (isNaN(idx) || idx < 0 || idx >= currentEmpFotos.length || !currentEmpFotos[idx]) {
+      console.warn('[galeria] Índice fora do intervalo do empreendimento atual:', item.dataset.index);
+      return;
+    }
+    lbIndex = idx;
+    abrirFotoLightbox(lbIndex);
     lb.classList.remove('hidden'); lb.classList.add('flex');
   });
   document.getElementById('lb-close').onclick = function() { lb.classList.add('hidden'); lb.classList.remove('flex'); };
-  document.getElementById('lb-prev').onclick = function() { lbIndex = (lbIndex-1+currentEmpFotos.length)%currentEmpFotos.length; lbImg.src = currentEmpFotos[lbIndex].url; };
-  document.getElementById('lb-next').onclick = function() { lbIndex = (lbIndex+1)%currentEmpFotos.length; lbImg.src = currentEmpFotos[lbIndex].url; };
+  // Troca a foto do lightbox com validação e placeholder — usada por clique, setas e teclado.
+  function abrirFotoLightbox(i) {
+    var f = currentEmpFotos[i];
+    if (!f) return;
+    var url = safeUrl(f.url);
+    lbImg.onerror = function() {
+      var ph = placeholderImg('Imagem indisponível', 900, 600);
+      if (lbImg.src !== ph) lbImg.src = ph;
+      console.warn('[galeria] Falha ao carregar a imagem no lightbox:', f.url);
+    };
+    lbImg.src = url || placeholderImg('Imagem indisponível', 900, 600);
+  }
+  document.getElementById('lb-prev').onclick = function() { if (!currentEmpFotos.length) return; lbIndex = (lbIndex-1+currentEmpFotos.length)%currentEmpFotos.length; abrirFotoLightbox(lbIndex); };
+  document.getElementById('lb-next').onclick = function() { if (!currentEmpFotos.length) return; lbIndex = (lbIndex+1)%currentEmpFotos.length; abrirFotoLightbox(lbIndex); };
   lb.addEventListener('click', function(e) { if(e.target===lb){lb.classList.add('hidden');lb.classList.remove('flex')} });
   document.addEventListener('keydown', function(e) {
     if (!lb.classList.contains('flex')) return;
@@ -1274,7 +1718,7 @@
     document.getElementById('clientes-titulo').textContent = u.role === 'admin' ? 'Clientes' : 'Meus Clientes';
     document.getElementById('clientes-sub').textContent = u.role === 'admin' ? 'Todos os clientes cadastrados pela equipe.' : 'Cadastre e acompanhe o andamento dos seus clientes.';
     var avatar = document.getElementById('sb-avatar');
-    if (u.foto_url) { avatar.innerHTML = '<img src="'+u.foto_url+'" class="w-full h-full object-cover">'; }
+    if (u.foto_url) { avatar.innerHTML = '<img src="'+safeUrl(u.foto_url)+'" class="w-full h-full object-cover">'; }
     else { avatar.textContent = (u.nome||u.email||'?').trim().charAt(0).toUpperCase(); }
   }
 
@@ -1315,7 +1759,7 @@
       if (res.error && res.error.code === '42703') {
         res = await sb.from('empreendimentos').select('*').order('created_at',{ascending:false}).limit(5);
       }
-      document.getElementById('dash-recentes').innerHTML = (res.data||[]).map(function(e) { return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'')+'</p></div><span class="text-sm font-medium text-brand-600">'+formatarMoeda(e.valor_inicial)+'</span></div>'; }).join('');
+      document.getElementById('dash-recentes').innerHTML = (res.data||[]).map(function(e) { return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+esc(e.nome)+'</p><p class="text-xs text-gray-400">'+esc(e.cidade||'')+' · '+esc(e.construtora||'')+'</p></div><span class="text-sm font-medium text-brand-600">'+formatarMoeda(e.valor_inicial)+'</span></div>'; }).join('');
 
       if (u && u.role === 'admin') await loadDashboardAdminExtras();
     } catch(err) {
@@ -1331,7 +1775,7 @@
       var topRes = await sb.from('empreendimentos').select('nome,cidade,encaminhamentos').order('encaminhamentos',{ascending:false}).limit(5);
       var top = (topRes.data||[]).filter(function(e){ return e.encaminhamentos > 0; });
       document.getElementById('dash-top-encaminhados').innerHTML = top.length ? top.map(function(e) {
-        return '<div class="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+'</p></div><span class="text-sm font-bold text-brand-600">'+e.encaminhamentos+'x</span></div>';
+        return '<div class="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+esc(e.nome)+'</p><p class="text-xs text-gray-400">'+esc(e.cidade||'')+'</p></div><span class="text-sm font-bold text-brand-600">'+e.encaminhamentos+'x</span></div>';
       }).join('') : '<p class="text-sm text-gray-400">Ainda não há envios registrados.</p>';
 
       // Acessos por usuário
@@ -1343,7 +1787,7 @@
       acessos.forEach(function(a) { contagem[a.usuario_id] = (contagem[a.usuario_id]||0) + 1; });
       var listaAcessos = perfis.map(function(p) { return {nome:p.nome||p.email, role:p.role, qtd: contagem[p.id]||0}; }).sort(function(a,b){ return b.qtd-a.qtd; });
       document.getElementById('dash-acessos').innerHTML = listaAcessos.map(function(a) {
-        return '<div class="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+a.nome+'</p><p class="text-xs text-gray-400 uppercase tracking-wider">'+(a.role==='admin'?'Administrador':'Corretor')+'</p></div><span class="text-sm font-bold text-brand-600">'+a.qtd+' acesso'+(a.qtd!==1?'s':'')+'</span></div>';
+        return '<div class="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between"><div><p class="font-medium text-sm text-gray-800">'+esc(a.nome)+'</p><p class="text-xs text-gray-400 uppercase tracking-wider">'+(a.role==='admin'?'Administrador':'Corretor')+'</p></div><span class="text-sm font-bold text-brand-600">'+a.qtd+' acesso'+(a.qtd!==1?'s':'')+'</span></div>';
       }).join('') || '<p class="text-sm text-gray-400">Nenhum acesso registrado ainda.</p>';
     } catch(err) {
       console.error('loadDashboardAdminExtras error:', errMsg(err), err);
@@ -1409,9 +1853,9 @@
         var online = a.ultimo && (Date.now()-new Date(a.ultimo).getTime() < 15*60000);
         return '<div class="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between gap-3">'
           + '<div class="flex items-center gap-3 min-w-0">'
-          + '<div class="relative shrink-0"><div class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-sm font-semibold">'+inicial+'</div>'+(online?'<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" title="ativo agora"></span>':'')+'</div>'
-          + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800 truncate">'+a.nome+'</p>'
-          + '<p class="text-xs text-gray-400 truncate">'+(a.telefone?a.telefone+' · ':'')+(a.role==='admin'?'Administrador':'Corretor')+'</p></div></div>'
+          + '<div class="relative shrink-0"><div class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-sm font-semibold">'+esc(inicial)+'</div>'+(online?'<span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" title="ativo agora"></span>':'')+'</div>'
+          + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800 truncate">'+esc(a.nome)+'</p>'
+          + '<p class="text-xs text-gray-400 truncate">'+(a.telefone?esc(a.telefone)+' · ':'')+(a.role==='admin'?'Administrador':'Corretor')+'</p></div></div>'
           + '<div class="text-right shrink-0"><p class="text-xs font-semibold text-brand-600">'+a.qtd+' acesso'+(a.qtd!==1?'s':'')+'</p>'
           + '<p class="text-[11px] text-gray-400">'+(a.ultimo?tempoRelativo(a.ultimo):'nunca entrou')+'</p></div>'
           + '</div>';
@@ -1423,7 +1867,7 @@
         var nome = p ? (p.nome||p.email) : 'Usuário removido';
         var d = new Date(a.created_at);
         return '<div class="bg-white rounded-xl p-3 border border-gray-100 flex items-center justify-between gap-3">'
-          + '<div class="flex items-center gap-2.5 min-w-0"><span class="text-brand-400">→</span><p class="text-sm text-gray-700 truncate"><b>'+nome+'</b> entrou no sistema</p></div>'
+          + '<div class="flex items-center gap-2.5 min-w-0"><span class="text-brand-400">→</span><p class="text-sm text-gray-700 truncate"><b>'+esc(nome)+'</b> entrou no sistema</p></div>'
           + '<span class="text-[11px] text-gray-400 shrink-0" title="'+d.toLocaleString('pt-BR')+'">'+tempoRelativo(a.created_at)+'</span></div>';
       }).join('');
       document.getElementById('ac-feed').innerHTML = feed || '<p class="text-sm text-gray-400">Nenhuma atividade registrada ainda.</p>';
@@ -1450,13 +1894,16 @@
 
   function renderAdminLista(lista) {
     document.getElementById('admin-lista').innerHTML = lista.map(function(e) {
-      return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-medium text-sm text-gray-800 truncate">'+e.nome+'</p><p class="text-xs text-gray-400">'+e.cidade+' · '+(e.construtora||'-')+' · '+formatarMoeda(e.valor_inicial)+'</p></div><div class="flex gap-1 shrink-0"><button onclick="editarEmp(\''+e.id+'\')" class="text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="excluirEmp(\''+e.id+'\',\''+e.nome.replace(/'/g,"\\'")+'\')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>';
+      var refAdm = empRef(e);
+      var aviso = slugValido(e.slug) ? '' : '<span class="ml-2 align-middle text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-medium">sem slug</span>';
+      var btnAbrir = refAdm ? '<a href="#empreendimento/'+encodeURIComponent(refAdm)+'" class="text-gray-400 hover:bg-gray-50 p-2 rounded-lg transition" title="Abrir no portal"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>' : '';
+      return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3"><div class="min-w-0 flex-1"><p class="font-medium text-sm text-gray-800 truncate">'+esc(e.nome)+aviso+'</p><p class="text-xs text-gray-400">'+esc(e.cidade||'-')+' · '+esc(e.construtora||'-')+' · '+formatarMoeda(e.valor_inicial)+'</p></div><div class="flex gap-1 shrink-0">'+btnAbrir+'<button onclick="editarEmp(\''+escJs(e.id)+'\')" class="text-brand-600 hover:bg-brand-50 p-2 rounded-lg transition" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button><button onclick="excluirEmp(\''+escJs(e.id)+'\',\''+escJs(e.nome)+'\')" class="text-red-400 hover:bg-red-50 p-2 rounded-lg transition" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div></div>';
     }).join('');
   }
 
   document.getElementById('admin-busca').addEventListener('input', function(e) {
     var t = e.target.value.toLowerCase();
-    renderAdminLista(todosEmpsAdmin.filter(function(emp) { return emp.nome.toLowerCase().indexOf(t)!==-1 || emp.cidade.toLowerCase().indexOf(t)!==-1; }));
+    renderAdminLista(todosEmpsAdmin.filter(function(emp) { return String(emp.nome||'').toLowerCase().indexOf(t)!==-1 || String(emp.cidade||'').toLowerCase().indexOf(t)!==-1; }));
   });
 
   function resetForm() {
@@ -1470,7 +1917,11 @@
 
   window.editarEmp = async function(id) {
     var res = await sb.from('empreendimentos').select('*, arquivos(*)').eq('id',id).single();
-    if (!res.data) return;
+    if (res.error || !res.data) {
+      console.error('[admin] Falha ao carregar empreendimento para edição. ID:', id, errMsg(res.error));
+      mostrarToast('Não foi possível abrir este empreendimento para edição.','error');
+      return;
+    }
     var emp = res.data;
     showAdminView('novo');
     document.getElementById('form-title').textContent = 'Editar Empreendimento';
@@ -1493,10 +1944,175 @@
     var tabelas_arr = (emp.arquivos||[]).filter(function(a){return a.tipo==='tabela'});
     var plantas_arr = (emp.arquivos||[]).filter(function(a){return a.tipo==='planta'});
 
-    document.getElementById('fotos-existentes').innerHTML = fotos.map(function(f) { return '<div class="relative inline-block"><img src="'+f.url+'" class="w-16 h-16 object-cover rounded-lg"><button onclick="excluirArquivo(\''+f.id+'\')" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button></div>'; }).join('');
-    document.getElementById('book-existentes').innerHTML = books.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Book')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
-    document.getElementById('tabela-existentes').innerHTML = tabelas_arr.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Tabela')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
-    document.getElementById('plantas-existentes').innerHTML = plantas_arr.map(function(f) { return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">'+(f.nome||'Planta')+'</span><button onclick="excluirArquivo(\''+f.id+'\')" class="text-red-500 text-xs hover:underline">remover</button></div>'; }).join('');
+    // Fotos existentes — com ação "Definir como capa" (a capa nunca é trocada sozinha).
+    var capaAtual = emp.imagem_principal || null;
+    document.getElementById('fotos-existentes').innerHTML = fotos.map(function(f) {
+      var eCapa = capaAtual && f.url === capaAtual;
+      var url = safeUrl(f.url) || placeholderImg('sem imagem', 120, 120);
+      return '<div class="relative inline-block ' + (eCapa ? 'ring-2 ring-brand-600 rounded-lg' : '') + '">'
+        + '<img src="' + url + '" class="w-16 h-16 object-cover rounded-lg" data-ph="' + esc(placeholderImg('erro',120,120)) + '" onerror="if(this.src!==this.dataset.ph){this.src=this.dataset.ph}">'
+        + (eCapa
+            ? '<span class="absolute bottom-0 inset-x-0 bg-brand-600 text-white text-[9px] text-center rounded-b-lg py-0.5">CAPA</span>'
+            : '<button onclick="definirCapa(\'' + escJs(f.url) + '\')" class="absolute bottom-0 inset-x-0 bg-black/60 hover:bg-black/80 text-white text-[9px] text-center rounded-b-lg py-0.5 transition" title="Definir como capa">capa</button>')
+        + '<button onclick="excluirArquivo(\'' + escJs(f.id) + '\')" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center" title="Remover">&times;</button>'
+        + '</div>';
+    }).join('') || '<p class="text-xs text-gray-400">Nenhuma foto enviada ainda.</p>';
+
+    var listaPdfAdmin = function(arr, label) {
+      return arr.map(function(f) {
+        return '<div class="flex items-center gap-2 text-sm text-gray-600"><span class="truncate">' + esc(f.nome || label) + '</span><button onclick="excluirArquivo(\'' + escJs(f.id) + '\')" class="text-red-500 text-xs hover:underline">remover</button></div>';
+      }).join('') || '<p class="text-xs text-gray-400">Nenhum arquivo enviado ainda.</p>';
+    };
+    document.getElementById('book-existentes').innerHTML = listaPdfAdmin(books, 'Book');
+    document.getElementById('tabela-existentes').innerHTML = listaPdfAdmin(tabelas_arr, 'Tabela');
+    document.getElementById('plantas-existentes').innerHTML = listaPdfAdmin(plantas_arr, 'Planta');
+  };
+
+  // ── Unicidade de slug ──
+  // Se 'residencial-vista-verde' já existe, tenta -2, -3, ... até achar livre.
+  // idIgnorar permite que o próprio registro mantenha o seu slug ao ser salvo.
+  async function garantirSlugUnico(base, idIgnorar) {
+    base = gerarSlugSeguro(base);
+    var candidato = base;
+    for (var n = 2; n <= 200; n++) {
+      var q = sb.from('empreendimentos').select('id').eq('slug', candidato).limit(1);
+      if (idIgnorar) q = q.neq('id', idIgnorar);
+      var res = await q;
+      if (res.error) { console.warn('[slug] Não foi possível verificar unicidade:', errMsg(res.error)); return candidato; }
+      if (!res.data || !res.data.length) return candidato;
+      candidato = base + '-' + n;
+    }
+    return base + '-' + Date.now().toString(36);
+  }
+
+  // ── Normalização em massa dos empreendimentos antigos ──
+  // Percorre a base e ATRIBUI slug apenas a quem está sem slug ou com slug
+  // inválido/duplicado. Slugs já válidos e únicos NÃO são alterados,
+  // para não quebrar links compartilhados.
+  window.normalizarSlugs = async function() {
+    var ok = await confirmar('Verificar e corrigir os identificadores (slugs) de todos os empreendimentos?<br><br>Slugs válidos existentes serão preservados — apenas registros sem slug ou com slug inválido/duplicado serão ajustados.');
+    if (!ok) return;
+
+    var btn = document.getElementById('btn-normalizar-slugs');
+    if (btn) { btn.disabled = true; btn.textContent = 'Verificando...'; btn.classList.add('opacity-60'); }
+
+    try {
+      var res = await sb.from('empreendimentos').select('id, nome, slug').order('id');
+      if (res.error) throw res.error;
+      var lista = res.data || [];
+
+      var usados = {};
+      var pendentes = [];
+
+      // 1ª passada: registra os slugs válidos já em uso (o primeiro fica com o slug).
+      lista.forEach(function(e) {
+        if (slugValido(e.slug) && !usados[e.slug]) { usados[e.slug] = e.id; }
+        else { pendentes.push(e); }
+      });
+
+      if (!pendentes.length) {
+        mostrarToast('Todos os empreendimentos já possuem slug válido e único.','success');
+        console.info('[slug] Nada a corrigir. Total verificado:', lista.length);
+        return;
+      }
+
+      // 2ª passada: gera slug para os pendentes, sem colidir com os já usados.
+      var corrigidos = 0, falhas = 0;
+      for (var i = 0; i < pendentes.length; i++) {
+        var e = pendentes[i];
+        var base = gerarSlugSeguro(e.nome, e.id);
+        var novo = base, n = 2;
+        while (usados[novo]) { novo = base + '-' + n; n++; }
+
+        var up = await sb.from('empreendimentos').update({ slug: novo }).eq('id', e.id);
+        if (up.error) {
+          falhas++;
+          console.error('[slug] Falha ao atualizar', e.id, e.nome, errMsg(up.error));
+        } else {
+          usados[novo] = e.id;
+          corrigidos++;
+          console.info('[slug] Corrigido:', e.nome, '| antes:', JSON.stringify(e.slug), '→ agora:', novo);
+        }
+        if (btn) btn.textContent = 'Corrigindo ' + (i+1) + '/' + pendentes.length + '...';
+      }
+
+      homeLoaded = false; cacheDiagnostico = null; // força recarregar a Home com os slugs novos
+      mostrarToast(corrigidos + ' empreendimento(s) corrigido(s)' + (falhas ? ' · ' + falhas + ' falha(s)' : ''), falhas ? 'warning' : 'success');
+      loadAdminEmpreendimentos();
+    } catch(err) {
+      console.error('normalizarSlugs error:', errMsg(err), err);
+      mostrarToast('Erro ao normalizar slugs: ' + errMsg(err), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Corrigir links (slugs)'; btn.classList.remove('opacity-60'); }
+    }
+  };
+
+  // ── Diagnóstico (SOMENTE LEITURA) ──
+  // Não altera nada. A correção continua sendo uma ação explícita do administrador.
+  window.diagnosticarEmpreendimentos = async function() {
+    var btn = document.getElementById('btn-diagnostico');
+    if (btn) { btn.disabled = true; btn.textContent = 'Analisando...'; }
+    try {
+      var res = await sb.from('empreendimentos').select('id, nome, slug').order('nome');
+      if (res.error) throw res.error;
+      var lista = res.data || [];
+
+      var contagem = {}, validos = 0, ausentes = 0, invalidos = 0;
+      var listaAusentes = [], listaInvalidos = [], listaDuplicados = [];
+
+      lista.forEach(function(e) {
+        var s = e.slug;
+        if (s === null || s === undefined || String(s).trim() === '') { ausentes++; listaAusentes.push(e.nome); return; }
+        if (!slugValido(s)) { invalidos++; listaInvalidos.push(e.nome + ' → ' + JSON.stringify(s)); return; }
+        validos++;
+        contagem[s] = (contagem[s] || 0) + 1;
+      });
+
+      Object.keys(contagem).forEach(function(s) {
+        if (contagem[s] > 1) listaDuplicados.push(s + ' (' + contagem[s] + '×)');
+      });
+
+      // "Dependem de fallback" = não abrem por slug direto; a abertura recai em ID/normalização.
+      var dependemFallback = ausentes + invalidos + listaDuplicados.reduce(function(acc, d) {
+        return acc + (parseInt(d.match(/\((\d+)×\)/)[1], 10) - 1);
+      }, 0);
+
+      console.group('[diagnóstico] SAÚDE DOS EMPREENDIMENTOS');
+      console.info('Total:', lista.length);
+      console.info('Slugs válidos e únicos:', validos - listaDuplicados.length);
+      console.info('Slugs ausentes:', ausentes, listaAusentes);
+      console.info('Slugs inválidos:', invalidos, listaInvalidos);
+      console.info('Slugs duplicados:', listaDuplicados.length, listaDuplicados);
+      console.info('Registros que dependem de fallback:', dependemFallback);
+      console.groupEnd();
+
+      var el = document.getElementById('diagnostico-resultado');
+      if (el) {
+        var problema = ausentes + invalidos + listaDuplicados.length;
+        el.classList.remove('hidden');
+        el.innerHTML =
+          '<div class="bg-white rounded-xl p-4 border ' + (problema ? 'border-amber-200' : 'border-emerald-200') + ' text-sm">' +
+          '<p class="font-medium text-gray-800 mb-3">Saúde dos empreendimentos</p>' +
+          '<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">' +
+          '<div><p class="text-gray-400">Total</p><p class="text-lg font-bold text-gray-800">' + lista.length + '</p></div>' +
+          '<div><p class="text-gray-400">Slugs válidos</p><p class="text-lg font-bold text-emerald-600">' + (validos - listaDuplicados.length) + '</p></div>' +
+          '<div><p class="text-gray-400">Ausentes</p><p class="text-lg font-bold ' + (ausentes?'text-amber-600':'text-gray-300') + '">' + ausentes + '</p></div>' +
+          '<div><p class="text-gray-400">Inválidos</p><p class="text-lg font-bold ' + (invalidos?'text-amber-600':'text-gray-300') + '">' + invalidos + '</p></div>' +
+          '<div><p class="text-gray-400">Duplicados</p><p class="text-lg font-bold ' + (listaDuplicados.length?'text-amber-600':'text-gray-300') + '">' + listaDuplicados.length + '</p></div>' +
+          '<div><p class="text-gray-400">Dependem de fallback</p><p class="text-lg font-bold ' + (dependemFallback?'text-amber-600':'text-gray-300') + '">' + dependemFallback + '</p></div>' +
+          '</div>' +
+          '<p class="text-[11px] text-gray-400 mt-3">' + (problema
+            ? 'Use "Corrigir links (slugs)" para ajustar. Slugs válidos não serão alterados. Detalhes no console.'
+            : 'Nenhum problema encontrado. Todos os empreendimentos abrem por slug direto.') + '</p>' +
+          '</div>';
+      }
+      mostrarToast('Diagnóstico concluído — detalhes no console.', 'info');
+    } catch (err) {
+      console.error('diagnosticarEmpreendimentos error:', errMsg(err), err);
+      mostrarToast('Erro no diagnóstico: ' + errMsg(err), 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Diagnóstico'; }
+    }
   };
 
   window.salvarEmpreendimento = async function() {
@@ -1505,12 +2121,18 @@
     var cidade = document.getElementById('f-cidade').value.trim();
     if (!nome||!cidade) { mostrarToast('Nome e Cidade são obrigatórios.','error'); return; }
 
+    // Trava de reentrância: protege contra duplo clique mesmo se o botão sumir do DOM.
+    if (salvandoEmpreendimento) { console.warn('[admin] Salvamento já em andamento — clique ignorado.'); return; }
+    salvandoEmpreendimento = true;
+
     // Desabilita botão e mostra progresso
     var btnSalvar = document.querySelector('#adm-novo button[onclick="salvarEmpreendimento()"]');
-    var btnTextoOriginal = btnSalvar.textContent;
-    btnSalvar.disabled = true;
-    btnSalvar.textContent = 'Salvando...';
-    btnSalvar.classList.add('opacity-60');
+    var btnTextoOriginal = btnSalvar ? btnSalvar.textContent : 'Salvar';
+    if (btnSalvar) {
+      btnSalvar.disabled = true;
+      btnSalvar.textContent = 'Salvando...';
+      btnSalvar.classList.add('opacity-60');
+    }
 
     var dados = {
       nome: nome, cidade: cidade,
@@ -1524,13 +2146,23 @@
       google_maps: document.getElementById('f-gmaps').value.trim()||null,
       video_url: document.getElementById('f-video').value.trim()||null,
     };
-    if (!id) dados.slug = gerarSlug(nome);
     try {
       var empId = id;
       if (id) {
+        // EDIÇÃO — o slug atual é preservado. Só é gerado/corrigido quando está
+        // ausente ou inválido. Trocar o nome NÃO troca o slug (links já
+        // compartilhados continuam funcionando).
+        var atualRes = await sb.from('empreendimentos').select('id, slug').eq('id', id).limit(1);
+        var slugAtual = (atualRes.data && atualRes.data[0]) ? atualRes.data[0].slug : null;
+        if (!slugValido(slugAtual)) {
+          dados.slug = await garantirSlugUnico(gerarSlugSeguro(nome, id), id);
+          console.info('[admin] Slug ausente/inválido corrigido para o empreendimento', id, '→', dados.slug);
+        }
         var res = await sb.from('empreendimentos').update(dados).eq('id',id);
         if (res.error) throw res.error;
       } else {
+        // CADASTRO NOVO — slug normalizado e garantidamente único.
+        dados.slug = await garantirSlugUnico(gerarSlugSeguro(nome), null);
         var res = await sb.from('empreendimentos').insert(dados).select().single();
         if (res.error) throw res.error;
         empId = res.data.id;
@@ -1547,72 +2179,251 @@
         btnSalvar.textContent = 'Enviando arquivos...';
       }
 
-      if (temFotos) await uploadFiles(empId,'f-fotos','foto','fotos');
-      if (temBook) await uploadFile(empId,'f-book','book','books');
-      if (temTabela) await uploadFile(empId,'f-tabela','tabela','tabelas');
-      if (temPlantas) await uploadFile(empId,'f-plantas','planta','plantas');
+      var resultadoUploads = {ok:0, falhou:0};
+      var somar = function(r) { resultadoUploads.ok += r.ok; resultadoUploads.falhou += r.falhou; };
 
-      // Atualizar imagem_principal com primeira foto
-      var fotosRes = await sb.from('arquivos').select('url').eq('empreendimento_id',empId).eq('tipo','foto').order('created_at').limit(1);
-      if (fotosRes.data && fotosRes.data.length > 0) {
-        await sb.from('empreendimentos').update({imagem_principal: fotosRes.data[0].url}).eq('id',empId);
+      if (temFotos)   somar(await uploadFiles(empId,'f-fotos','foto','fotos'));
+      if (temBook)    somar(await uploadFile(empId,'f-book','book','books'));
+      if (temTabela)  somar(await uploadFile(empId,'f-tabela','tabela','tabelas'));
+      if (temPlantas) somar(await uploadFile(empId,'f-plantas','planta','plantas'));
+
+      // ── CAPA (imagem_principal) ──
+      // NUNCA sobrescreve uma capa já definida. Só preenche quando está ausente
+      // ou quando aponta para um arquivo que não existe mais.
+      try {
+        var capaRes = await sb.from('empreendimentos').select('imagem_principal').eq('id', empId).limit(1);
+        var capaAtual = (capaRes.data && capaRes.data[0]) ? capaRes.data[0].imagem_principal : null;
+
+        var fotosRes = await sb.from('arquivos').select('url').eq('empreendimento_id',empId).eq('tipo','foto');
+        if (fotosRes.error) throw fotosRes.error;
+        var urls = (fotosRes.data || []).map(function(f){ return f.url; }).filter(Boolean);
+
+        var capaValida = capaAtual && urls.indexOf(capaAtual) !== -1;
+        if (!capaValida && urls.length) {
+          await sb.from('empreendimentos').update({imagem_principal: urls[0]}).eq('id',empId);
+          if (capaAtual) console.info('[capa] Capa anterior não existe mais entre as fotos; substituída pela primeira disponível.');
+        } else if (capaValida) {
+          console.info('[capa] Capa definida pelo usuário preservada.');
+        }
+      } catch (eCapa) {
+        // Falha na capa não invalida o salvamento do empreendimento.
+        console.error('[capa] Não foi possível verificar/definir a capa:', errMsg(eCapa));
       }
 
-      homeLoaded = false;
+      homeLoaded = false; cacheDiagnostico = null;
+      var refSalvo = null;
+      try {
+        var refRes = await sb.from('empreendimentos').select('id, slug').eq('id', empId).limit(1);
+        if (refRes.data && refRes.data[0]) refSalvo = empRef(refRes.data[0]);
+      } catch (eRef) { console.warn('[admin] Não foi possível obter a referência do registro salvo:', errMsg(eRef)); }
+
       mostrarToast(id?'Empreendimento atualizado!':'Empreendimento cadastrado!','success');
-      if (totalUploads > 0) mostrarToast(totalUploads + ' arquivo(s) enviado(s)','info');
+      relatarUploads(resultadoUploads);
       showAdminView('empreendimentos');
+      // Ação clara de "Visualizar empreendimento" usando a MESMA função de navegação.
+      if (refSalvo) mostrarAcaoVisualizar(refSalvo);
     } catch(err) {
       console.error('salvarEmpreendimento error:', errMsg(err), err);
       mostrarToast('Erro ao salvar: '+errMsg(err),'error');
     } finally {
-      btnSalvar.disabled = false;
-      btnSalvar.textContent = btnTextoOriginal;
-      btnSalvar.classList.remove('opacity-60');
+      salvandoEmpreendimento = false;
+      if (btnSalvar) {
+        btnSalvar.disabled = false;
+        btnSalvar.textContent = btnTextoOriginal;
+        btnSalvar.classList.remove('opacity-60');
+      }
     }
   };
 
-  async function uploadFiles(empId,inputId,tipo,bucket) {
-    var input = document.getElementById(inputId);
-    if (!input.files.length) return;
-    for (var i=0; i<input.files.length; i++) {
-      var file = input.files[i];
-      var path = empId+'/'+tipo+'/'+Date.now()+'-'+i+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
-      if (res.error) { console.error('Upload erro ('+file.name+'):', errMsg(res.error)); mostrarToast('Erro ao enviar '+file.name+': '+errMsg(res.error),'error'); continue; }
-      var urlData = sb.storage.from(bucket).getPublicUrl(path);
-      var insertRes = await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
-      if (insertRes.error) { console.error('Insert arquivo erro:', errMsg(insertRes.error)); }
+  // ── Uploads ──
+  // Limite de tamanho por arquivo. Acima disso o Storage rejeita com erro obscuro;
+  // barramos antes com mensagem clara.
+  var LIMITE_ARQUIVO_MB = 25;
+
+  function validarArquivo(file, tipo) {
+    if (!file || !file.size) return 'arquivo vazio ou ilegível';
+    if (file.size > LIMITE_ARQUIVO_MB * 1024 * 1024) {
+      return 'excede o limite de ' + LIMITE_ARQUIVO_MB + ' MB (' + (file.size/1024/1024).toFixed(1) + ' MB)';
     }
+    if (tipo === 'foto' && file.type && file.type.indexOf('image/') !== 0) return 'não é uma imagem';
+    if (tipo !== 'foto' && file.type && file.type !== 'application/pdf' && file.type.indexOf('image/') !== 0) {
+      return 'formato não suportado (' + file.type + ')';
+    }
+    return null;
   }
 
-  async function uploadFile(empId,inputId,tipo,bucket) {
-    var input = document.getElementById(inputId);
-    if (!input.files.length) return;
-    var file = input.files[0];
-    var path = empId+'/'+tipo+'/'+Date.now()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var res = await sb.storage.from(bucket).upload(path,file,{upsert:true});
-    if (res.error) { console.error('Upload erro ('+file.name+'):', errMsg(res.error)); mostrarToast('Erro ao enviar '+file.name+': '+errMsg(res.error),'error'); return; }
+  // Sobe um arquivo e registra no banco. Retorna true SÓ se as duas etapas deram certo.
+  // Se o Storage aceitar mas o insert falhar, remove o objeto para não deixar órfão.
+  async function enviarUmArquivo(empId, file, tipo, bucket, indice) {
+    var motivo = validarArquivo(file, tipo);
+    if (motivo) {
+      console.warn('[upload] Recusado:', file && file.name, '—', motivo);
+      mostrarToast('"' + (file ? file.name : 'arquivo') + '" não enviado: ' + motivo, 'warning');
+      return false;
+    }
+    var nomeLimpo = String(file.name || 'arquivo').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-120);
+    var path = empId + '/' + tipo + '/' + Date.now() + '-' + (indice || 0) + '-' + nomeLimpo;
+
+    var res = await sb.storage.from(bucket).upload(path, file, {upsert:true});
+    if (res.error) {
+      console.error('[upload] Falha no Storage (' + file.name + '):', errMsg(res.error));
+      mostrarToast('Erro ao enviar ' + file.name + ': ' + errMsg(res.error), 'error');
+      return false;
+    }
+
     var urlData = sb.storage.from(bucket).getPublicUrl(path);
-    var insertRes = await sb.from('arquivos').insert({empreendimento_id:empId,tipo:tipo,nome:file.name,url:urlData.data.publicUrl});
-    if (insertRes.error) { console.error('Insert arquivo erro:', errMsg(insertRes.error)); }
+    var url = urlData && urlData.data ? urlData.data.publicUrl : null;
+    if (!url) {
+      console.error('[upload] Storage aceitou mas não retornou URL pública. path:', path);
+      try { await sb.storage.from(bucket).remove([path]); } catch(e) {}
+      mostrarToast('Erro ao obter o link de ' + file.name + '. O arquivo não foi registrado.', 'error');
+      return false;
+    }
+
+    var insertRes = await sb.from('arquivos').insert({empreendimento_id:empId, tipo:tipo, nome:file.name, url:url});
+    if (insertRes.error) {
+      console.error('[upload] Storage OK mas insert em "arquivos" falhou:', errMsg(insertRes.error), '| desfazendo upload:', path);
+      // Compensação: sem o registro no banco o arquivo seria invisível e ocuparia espaço.
+      try { await sb.storage.from(bucket).remove([path]); }
+      catch (e) { console.error('[upload] Não foi possível remover o órfão do Storage:', path, errMsg(e)); }
+      mostrarToast('Erro ao registrar ' + file.name + ': ' + errMsg(insertRes.error), 'error');
+      return false;
+    }
+    return true;
+  }
+
+  // Retorna {ok: n, falhou: n} — números REAIS, nunca a contagem de arquivos selecionados.
+  async function uploadFiles(empId, inputId, tipo, bucket) {
+    var r = {ok:0, falhou:0};
+    var input = document.getElementById(inputId);
+    if (!input || !input.files.length) return r;
+    for (var i=0; i<input.files.length; i++) {
+      var sucesso = await enviarUmArquivo(empId, input.files[i], tipo, bucket, i);
+      if (sucesso) r.ok++; else r.falhou++;
+    }
+    return r;
+  }
+
+  async function uploadFile(empId, inputId, tipo, bucket) {
+    var r = {ok:0, falhou:0};
+    var input = document.getElementById(inputId);
+    if (!input || !input.files.length) return r;
+    var sucesso = await enviarUmArquivo(empId, input.files[0], tipo, bucket, 0);
+    if (sucesso) r.ok++; else r.falhou++;
+    return r;
+  }
+
+  // Informa honestamente o resultado: nunca diz "enviado" para o que falhou.
+  function relatarUploads(r) {
+    if (!r || (!r.ok && !r.falhou)) return;
+    if (r.falhou && r.ok) mostrarToast(r.ok + ' arquivo(s) enviado(s) · ' + r.falhou + ' falhou(ram)', 'warning');
+    else if (r.falhou) mostrarToast('Nenhum arquivo foi enviado (' + r.falhou + ' falha(s)). Veja os avisos acima.', 'error');
+    else mostrarToast(r.ok + ' arquivo(s) enviado(s)', 'info');
+  }
+
+  // Oferece "Visualizar empreendimento" após salvar, usando abrirEmpreendimento().
+  function mostrarAcaoVisualizar(ref) {
+    var c = document.getElementById('toast-container');
+    if (!c || !ref) return;
+    var t = document.createElement('div');
+    t.className = 'bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm max-w-xs';
+    t.innerHTML = '<span class="flex-1">Ver no portal?</span>';
+    var b = document.createElement('button');
+    b.className = 'bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0';
+    b.textContent = 'Visualizar';
+    b.onclick = function() { t.remove(); abrirEmpreendimento(ref); };
+    t.appendChild(b);
+    c.appendChild(t);
+    setTimeout(function() { if (t.parentNode) t.remove(); }, 8000);
   }
 
   window.excluirEmp = async function(id,nome) {
-    if (!(await confirmar('Excluir "'+nome+'"? Esta ação não pode ser desfeita.'))) return;
-    var res = await sb.from('empreendimentos').delete().eq('id',id);
-    if (res.error) { mostrarToast('Erro ao excluir','error'); return; }
-    homeLoaded = false;
-    mostrarToast('Empreendimento excluído.','success');
-    loadAdminEmpreendimentos();
+    if (!(await confirmar('Excluir "'+esc(nome)+'"? Esta ação não pode ser desfeita.<br><br>As fotos e PDFs vinculados também serão removidos.'))) return;
+    try {
+      // Remove primeiro os objetos do Storage: se apagássemos só o empreendimento,
+      // os arquivos ficariam órfãos no bucket, ocupando espaço e sem referência.
+      var arqRes = await sb.from('arquivos').select('tipo, url').eq('empreendimento_id', id);
+      if (arqRes.error) {
+        console.warn('[exclusão] Não foi possível listar os arquivos vinculados:', errMsg(arqRes.error));
+      } else {
+        var buckets = { foto:'fotos', book:'books', tabela:'tabelas', planta:'plantas' };
+        var porBucket = {};
+        (arqRes.data || []).forEach(function(a) {
+          var b = buckets[a.tipo];
+          if (!b || !a.url) return;
+          // Extrai o caminho interno a partir da URL pública do Storage.
+          var marca = '/object/public/' + b + '/';
+          var pos = String(a.url).indexOf(marca);
+          if (pos === -1) return;
+          var caminho = decodeURIComponent(String(a.url).slice(pos + marca.length).split('?')[0]);
+          (porBucket[b] = porBucket[b] || []).push(caminho);
+        });
+        for (var b in porBucket) {
+          try {
+            var rm = await sb.storage.from(b).remove(porBucket[b]);
+            if (rm.error) console.warn('[exclusão] Falha ao remover do bucket "'+b+'":', errMsg(rm.error));
+          } catch (e) { console.warn('[exclusão] Erro no bucket "'+b+'":', errMsg(e)); }
+        }
+      }
+
+      var res = await sb.from('empreendimentos').delete().eq('id',id);
+      if (res.error) throw res.error;
+
+      homeLoaded = false; cacheDiagnostico = null;
+      mostrarToast('Empreendimento excluído.','success');
+      loadAdminEmpreendimentos();
+    } catch (err) {
+      console.error('[exclusão] Falha ao excluir empreendimento', id, errMsg(err), err);
+      mostrarToast('Erro ao excluir: ' + errMsg(err), 'error');
+    }
+  };
+
+  // Define explicitamente a capa do empreendimento em edição.
+  window.definirCapa = async function(url) {
+    var empId = document.getElementById('f-id').value;
+    if (!empId) { mostrarToast('Salve o empreendimento antes de definir a capa.','warning'); return; }
+    if (!safeUrl(url)) { mostrarToast('Esta imagem não possui um link válido.','error'); return; }
+    try {
+      var res = await sb.from('empreendimentos').update({imagem_principal: url}).eq('id', empId);
+      if (res.error) throw res.error;
+      homeLoaded = false; cacheDiagnostico = null;
+      mostrarToast('Capa definida.','success');
+      editarEmp(empId);
+    } catch (err) {
+      console.error('[capa] Falha ao definir capa:', errMsg(err), err);
+      mostrarToast('Erro ao definir capa: ' + errMsg(err), 'error');
+    }
   };
 
   window.excluirArquivo = async function(id) {
-    var res = await sb.from('arquivos').delete().eq('id',id);
-    if (res.error) { mostrarToast('Erro ao remover arquivo','error'); return; }
-    mostrarToast('Arquivo removido.','success');
     var empId = document.getElementById('f-id').value;
-    if (empId) editarEmp(empId);
+    try {
+      // Descobre a URL antes de apagar: se este arquivo for a capa, a capa precisa
+      // ser liberada, senão o card da Home aponta para um arquivo inexistente.
+      var infoRes = await sb.from('arquivos').select('url').eq('id', id).limit(1);
+      var urlArquivo = (infoRes.data && infoRes.data[0]) ? infoRes.data[0].url : null;
+
+      var res = await sb.from('arquivos').delete().eq('id',id);
+      if (res.error) throw res.error;
+
+      if (empId && urlArquivo) {
+        var capaRes = await sb.from('empreendimentos').select('imagem_principal').eq('id', empId).limit(1);
+        var capa = (capaRes.data && capaRes.data[0]) ? capaRes.data[0].imagem_principal : null;
+        if (capa === urlArquivo) {
+          var restRes = await sb.from('arquivos').select('url').eq('empreendimento_id', empId).eq('tipo','foto').limit(1);
+          var nova = (restRes.data && restRes.data[0]) ? restRes.data[0].url : null;
+          await sb.from('empreendimentos').update({imagem_principal: nova}).eq('id', empId);
+          console.info('[capa] Capa apontava para o arquivo removido; substituída por:', nova);
+        }
+      }
+
+      homeLoaded = false; cacheDiagnostico = null;
+      mostrarToast('Arquivo removido.','success');
+      if (empId) editarEmp(empId);
+    } catch (err) {
+      console.error('[arquivos] Falha ao remover:', errMsg(err), err);
+      mostrarToast('Erro ao remover arquivo: ' + errMsg(err),'error');
+    }
   };
 
   async function loadConfig() {
@@ -1653,14 +2464,14 @@
       var res = await sb.from('perfis').select('*').order('created_at',{ascending:false});
       var lista = res.data || [];
       document.getElementById('usuarios-lista').innerHTML = lista.map(function(u) {
-        var avatar = u.foto_url ? '<img src="'+u.foto_url+'" class="w-9 h-9 rounded-full object-cover">' : '<div class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-sm font-semibold">'+(u.nome||u.email||'?').charAt(0).toUpperCase()+'</div>';
+        var avatar = u.foto_url ? '<img src="'+safeUrl(u.foto_url)+'" class="w-9 h-9 rounded-full object-cover">' : '<div class="w-9 h-9 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-sm font-semibold">'+esc((u.nome||u.email||'?').charAt(0).toUpperCase())+'</div>';
         var podeExcluir = window.currentUser && u.id !== window.currentUser.id;
         return '<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between gap-3">'
           + '<div class="flex items-center gap-3 min-w-0">' + avatar
-          + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800 truncate">'+(u.nome||'(sem nome ainda)')+'</p><p class="text-xs text-gray-400 truncate">'+u.email+'</p>'+(u.telefone?'<p class="text-xs text-gray-400 truncate">'+u.telefone+'</p>':'')+'</div></div>'
+          + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800 truncate">'+esc(u.nome||'(sem nome ainda)')+'</p><p class="text-xs text-gray-400 truncate">'+esc(u.email)+'</p>'+(u.telefone?'<p class="text-xs text-gray-400 truncate">'+esc(u.telefone)+'</p>':'')+'</div></div>'
           + '<div class="flex items-center gap-3 shrink-0">'
           + '<span class="tag-chip '+(u.role==='admin'?'bg-brand-50 text-brand-600':'bg-gray-50 text-gray-500')+'">'+(u.role==='admin'?'Admin':'Corretor')+'</span>'
-          + (podeExcluir ? '<button onclick="excluirUsuario(\''+u.id+'\',\''+(u.nome||u.email).replace(/'/g,"\\'")+'\')" class="text-red-500 text-xs hover:underline">excluir</button>' : '')
+          + (podeExcluir ? '<button onclick="excluirUsuario(\''+escJs(u.id)+'\',\''+escJs(u.nome||u.email)+'\')" class="text-red-500 text-xs hover:underline">excluir</button>' : '')
           + '</div></div>';
       }).join('') || '<p class="text-sm text-gray-400">Nenhum usuário cadastrado ainda.</p>';
     } catch(err) {
@@ -1705,7 +2516,7 @@
   };
 
   window.excluirUsuario = async function(id, nome) {
-    if (!(await confirmar('Remover o acesso de "'+nome+'"? A pessoa não conseguirá mais entrar no sistema.'))) return;
+    if (!(await confirmar('Remover o acesso de "'+esc(nome)+'"? A pessoa não conseguirá mais entrar no sistema.'))) return;
     try {
       var sessionRes = await sb.auth.getSession();
       var token = sessionRes.data.session.access_token;
@@ -1744,7 +2555,7 @@
         var contagem = {};
         todosClientes.forEach(function(c) { contagem[c.corretor_id] = (contagem[c.corretor_id]||0) + 1; });
         document.getElementById('resumo-corretores').innerHTML = perfis.map(function(p) {
-          return '<div class="bg-white rounded-xl p-4 border border-gray-100"><p class="font-medium text-sm text-gray-800">'+(p.nome||p.email)+'</p><p class="text-xs text-gray-400 mt-0.5">'+(contagem[p.id]||0)+' cliente'+((contagem[p.id]||0)!==1?'s':'')+' cadastrado'+((contagem[p.id]||0)!==1?'s':'')+'</p></div>';
+          return '<div class="bg-white rounded-xl p-4 border border-gray-100"><p class="font-medium text-sm text-gray-800">'+esc(p.nome||p.email)+'</p><p class="text-xs text-gray-400 mt-0.5">'+(contagem[p.id]||0)+' cliente'+((contagem[p.id]||0)!==1?'s':'')+' cadastrado'+((contagem[p.id]||0)!==1?'s':'')+'</p></div>';
         }).join('');
       } else {
         resumoBox.classList.add('hidden');
@@ -1764,16 +2575,16 @@
     var el = document.getElementById('clientes-lista');
     if (!lista.length) { el.innerHTML = '<p class="text-sm text-gray-400 text-center py-10">Nenhum cliente cadastrado ainda.</p>'; return; }
     el.innerHTML = lista.map(function(c) {
-      var dono = (u && u.role==='admin' && c.perfis) ? '<p class="text-[11px] text-gray-400 mt-0.5">Corretor: '+(c.perfis.nome||c.perfis.email)+'</p>' : '';
+      var dono = (u && u.role==='admin' && c.perfis) ? '<p class="text-[11px] text-gray-400 mt-0.5">Corretor: '+esc(c.perfis.nome||c.perfis.email)+'</p>' : '';
       return '<div class="bg-white rounded-xl p-4 border border-gray-100">'
         + '<div class="flex items-start justify-between gap-3">'
-        + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800">'+c.nome+'</p><p class="text-xs text-gray-400">'+(c.telefone||'sem telefone')+'</p>'+dono+'</div>'
-        + '<span class="tag-chip '+statusCor(c.status)+' shrink-0">'+c.status+'</span>'
+        + '<div class="min-w-0"><p class="font-medium text-sm text-gray-800">'+esc(c.nome)+'</p><p class="text-xs text-gray-400">'+esc(c.telefone||'sem telefone')+'</p>'+dono+'</div>'
+        + '<span class="tag-chip '+statusCor(c.status)+' shrink-0">'+esc(c.status)+'</span>'
         + '</div>'
-        + (c.obs ? '<p class="text-xs text-gray-500 mt-2 leading-relaxed">'+c.obs+'</p>' : '')
+        + (c.obs ? '<p class="text-xs text-gray-500 mt-2 leading-relaxed">'+esc(c.obs)+'</p>' : '')
         + '<div class="flex gap-3 mt-3 pt-3 border-t border-gray-50">'
-        + '<button onclick="editarCliente(\''+c.id+'\')" class="text-xs text-brand-600 hover:underline">editar</button>'
-        + '<button onclick="excluirCliente(\''+c.id+'\',\''+c.nome.replace(/'/g,"\\'")+'\')" class="text-xs text-red-500 hover:underline">excluir</button>'
+        + '<button onclick="editarCliente(\''+escJs(c.id)+'\')" class="text-xs text-brand-600 hover:underline">editar</button>'
+        + '<button onclick="excluirCliente(\''+escJs(c.id)+'\',\''+escJs(c.nome)+'\')" class="text-xs text-red-500 hover:underline">excluir</button>'
         + '</div></div>';
     }).join('');
   }
@@ -1837,7 +2648,7 @@
   };
 
   window.excluirCliente = async function(id, nome) {
-    if (!(await confirmar('Excluir o cliente "'+nome+'"?'))) return;
+    if (!(await confirmar('Excluir o cliente "'+esc(nome)+'"?'))) return;
     var res = await sb.from('clientes').delete().eq('id',id);
     if (res.error) { mostrarToast('Erro ao excluir','error'); return; }
     mostrarToast('Cliente removido.','success');
@@ -2014,17 +2825,20 @@
   }
 
   function empCard(e) {
-    return '<div class="ia-emp-card" onclick="location.hash=\'#empreendimento/'+e.slug+'\';toggleIA()">'
-      + '<div style="font-weight:600;font-size:13px;color:#7a0929">' + e.nome + '</div>'
+    // Mesma referência e mesma função de navegação usadas pelos cards da Home.
+    var refIA = empRef(e);
+    if (!refIA) console.error('[IA] Empreendimento sem identificador navegável:', e);
+    return '<div class="ia-emp-card" onclick="toggleIA();abrirEmpreendimento(\''+escJs(refIA)+'\')">'
+      + '<div style="font-weight:600;font-size:13px;color:#7a0929">' + esc(e.nome) + '</div>'
       + '<div style="font-size:11px;color:#6b7280;margin-top:2px">'
-      + e.cidade + (e.bairro ? ' · ' + e.bairro : '')
-      + (e.construtora ? ' — ' + e.construtora : '')
+      + esc(e.cidade || '') + (e.bairro ? ' · ' + esc(e.bairro) : '')
+      + (e.construtora ? ' — ' + esc(e.construtora) : '')
       + '</div>'
       + '<div style="display:flex;gap:12px;margin-top:5px;font-size:11px">'
       + '<span style="color:#c81046;font-weight:600">' + fmtMoeda(e.valor_inicial) + '</span>'
-      + (e.metragem ? '<span style="color:#6b7280">' + e.metragem + '</span>' : '')
-      + (e.tipologia ? '<span style="color:#6b7280">' + e.tipologia + '</span>' : '')
-      + (e.entrega ? '<span style="color:#059669;font-weight:500">' + e.entrega + '</span>' : '')
+      + (e.metragem ? '<span style="color:#6b7280">' + esc(e.metragem) + '</span>' : '')
+      + (e.tipologia ? '<span style="color:#6b7280">' + esc(e.tipologia) + '</span>' : '')
+      + (e.entrega ? '<span style="color:#059669;font-weight:500">' + esc(e.entrega) + '</span>' : '')
       + '</div></div>';
   }
 
@@ -2076,8 +2890,8 @@
         if (e.entrega && norm(e.entrega) === 'pronto') prontos++;
         if (e.valor_inicial) { menorV = Math.min(menorV, e.valor_inicial); maiorV = Math.max(maiorV, e.valor_inicial); }
       });
-      var cidadesStr = Object.keys(cidades).map(function(c) { return c + ' (' + cidades[c] + ')'; }).join(', ');
-      var constStr = Object.keys(construtoras).map(function(c) { return c + ' (' + construtoras[c] + ')'; }).join(', ');
+      var cidadesStr = Object.keys(cidades).map(function(c) { return esc(c) + ' (' + cidades[c] + ')'; }).join(', ');
+      var constStr = Object.keys(construtoras).map(function(c) { return esc(c) + ' (' + construtoras[c] + ')'; }).join(', ');
       return '📊 <b>Resumo do Catálogo</b>\n\n'
         + '🏢 <b>' + total + '</b> empreendimentos ativos\n'
         + '✅ <b>' + prontos + '</b> prontos para morar\n'
@@ -2092,7 +2906,7 @@
       dados.forEach(function(e) { cids[e.cidade] = (cids[e.cidade]||0) + 1; });
       var lista = Object.entries(cids).sort(function(a,b) { return b[1] - a[1]; });
       return '📍 <b>Cidades com empreendimentos:</b>\n\n' + lista.map(function(c) {
-        return '• <b>' + c[0] + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
+        return '• <b>' + esc(c[0]) + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
       }).join('\n') + chipsIA(lista.slice(0,6).map(function(c) { return 'em ' + c[0]; }));
     }
 
@@ -2103,7 +2917,7 @@
       var lista = Object.entries(consts).sort(function(a,b) { return b[1] - a[1]; });
       if (!lista.length) return 'Não há construtoras informadas nos cadastros.';
       return '🏗️ <b>Construtoras:</b>\n\n' + lista.map(function(c) {
-        return '• <b>' + c[0] + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
+        return '• <b>' + esc(c[0]) + '</b> — ' + c[1] + ' empreendimento' + (c[1]>1?'s':'');
       }).join('\n');
     }
 
@@ -2114,7 +2928,7 @@
       if (cidMatch) {
         var cidBusca = cidMatch[1].trim();
         var filtrados = dados.filter(function(e) { return norm(e.cidade).indexOf(cidBusca) !== -1; });
-        if (filtrados.length) return 'Encontrei <b>' + filtrados.length + '</b> empreendimento' + (filtrados.length>1?'s':'') + ' em <b>' + filtrados[0].cidade + '</b>.';
+        if (filtrados.length) return 'Encontrei <b>' + filtrados.length + '</b> empreendimento' + (filtrados.length>1?'s':'') + ' em <b>' + esc(filtrados[0].cidade) + '</b>.';
       }
       return 'O catálogo tem <b>' + dados.length + '</b> empreendimentos ativos.';
     }
@@ -2208,8 +3022,8 @@
     if (bairroMatch) {
       var bBusca = norm(bairroMatch[1]);
       var filtradosB = dados.filter(function(e) { return e.bairro && norm(e.bairro).indexOf(bBusca) !== -1; });
-      if (filtradosB.length) return '📍 <b>' + filtradosB.length + ' no bairro "' + bairroMatch[1].trim() + '":</b>' + filtradosB.slice(0,6).map(empCard).join('');
-      return 'Não encontrei empreendimentos no bairro "<b>' + bairroMatch[1].trim() + '</b>".';
+      if (filtradosB.length) return '📍 <b>' + filtradosB.length + ' no bairro "' + esc(bairroMatch[1].trim()) + '":</b>' + filtradosB.slice(0,6).map(empCard).join('');
+      return 'Não encontrei empreendimentos no bairro "<b>' + esc(bairroMatch[1].trim()) + '</b>".';
     }
 
     // ── Filtro por cidade: "em [cidade]" ──
@@ -2219,7 +3033,7 @@
       if (cidBusca.length >= 3) {
         var filtrados = dados.filter(function(e) { return norm(e.cidade).indexOf(cidBusca) !== -1 || (e.bairro && norm(e.bairro).indexOf(cidBusca) !== -1); });
         if (filtrados.length) {
-          return '📍 <b>' + filtrados.length + ' empreendimento' + (filtrados.length>1?'s':'') + ' em "' + cidBusca + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
+          return '📍 <b>' + filtrados.length + ' empreendimento' + (filtrados.length>1?'s':'') + ' em "' + esc(cidBusca) + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
         }
       }
     }
@@ -2230,7 +3044,7 @@
       var cBusca = constMatch[1].trim();
       var filtrados = dados.filter(function(e) { return e.construtora && norm(e.construtora).indexOf(cBusca) !== -1; });
       if (filtrados.length) {
-        return '🏗️ <b>' + filtrados.length + ' da construtora "' + filtrados[0].construtora + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
+        return '🏗️ <b>' + filtrados.length + ' da construtora "' + esc(filtrados[0].construtora) + '":</b>' + filtrados.slice(0,6).map(empCard).join('');
       }
       return 'Não encontrei empreendimentos da construtora "<b>' + cBusca + '</b>".';
     }
@@ -2261,12 +3075,12 @@
         if (d < melhorDist) { melhorDist = d; melhor = e; }
       });
       if (melhor && melhorDist <= Math.max(2, Math.floor(norm(melhor.nome).length * 0.4))) {
-        return 'Não achei nada exato, mas você quis dizer <b>' + melhor.nome + '</b>?' + empCard(melhor) + chipsIA(['Quais cidades?','Resumo geral']);
+        return 'Não achei nada exato, mas você quis dizer <b>' + esc(melhor.nome) + '</b>?' + empCard(melhor) + chipsIA(['Quais cidades?','Resumo geral']);
       }
     }
 
     // ── Não entendi ──
-    return '🤔 Não encontrei resultados para "<b>' + msg + '</b>".\n\nTente de outro jeito 👇' + chipsIA(['Mais baratos','Prontos para morar','Quais cidades?','Resumo geral']);
+    return '🤔 Não encontrei resultados para "<b>' + esc(msg) + '</b>".\n\nTente de outro jeito 👇' + chipsIA(['Mais baratos','Prontos para morar','Quais cidades?','Resumo geral']);
   }
 
   // ── Init ──
